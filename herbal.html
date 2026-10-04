@@ -827,6 +827,7 @@ async function analyzeComplaint(){
     return;
   }
   window.freeComplaintText = text;
+  window.lastCausesPromise = herbalGetCauses(text); // AI پہلے تکلیف کی وجوہات نکالے — دوا انہی کے مطابق
   if(!isLiveDeployedPageForComplaint()){
     if(statusEl) statusEl.textContent = 'یہ سہولت صرف لائیو ویب سائٹ پر کام کرتی ہے — تمام سوالات دکھائے جا رہے ہیں۔';
     showAllDiagnosisFields();
@@ -3374,6 +3375,9 @@ function qmDiseaseText(){
   if(QM_SYN_CACHE[nm]) txt += ' ' + QM_SYN_CACHE[nm].synonyms.join(' ');
   txt += ' ' + herbalOrganVariants(nm, 10).join(' ');
   Object.keys(QM_DISEASE_SYN).forEach(k=>{ if(txt.includes(k)) txt += ' ' + QM_DISEASE_SYN[k]; });
+  // AI کی بتائی ہوئی وجوہات کے مطابق فوائد (مثلاً جلن → سوزش، اعصابی کمزوری، خون صاف) بھی شامل
+  const chz = (typeof herbalChosenCause === 'function') ? herbalChosenCause('qm', nm) : null;
+  if(chz) txt += ' ' + chz.cause + ' ' + (chz.effects || []).join(' ');
   return txt;
 }
 // نسخے کے لیے جڑی بوٹیاں: پہلے مرض کے فوائد، پھر مزاج (علاج والی تحریک)، پھر کتنی عام ہے — 3 سے 4 اجزاء
@@ -3635,6 +3639,203 @@ function qmFetchJson(url, body, ms){
     new Promise(res=> setTimeout(()=> res(null), ms || 15000))
   ]).catch(()=> null);
 }
+// ===== پوری سائٹ کے لیے: AI پہلے مرض/تکلیف کی وجوہات (اسباب) نکالتا ہے — پھر انہی کے مطابق بوٹیاں/دوا/صفحات =====
+const HERBAL_CAUSE_CACHE = {};
+const HERBAL_CAUSE_PENDING = {};
+function herbalCauseKey(name){ return String(name || '').trim().replace(/\s+/g, ' ').slice(0, 400); }
+function herbalGetCausesCached(name){ return HERBAL_CAUSE_CACHE[herbalCauseKey(name)] || null; }
+async function herbalGetCauses(name){
+  const key = herbalCauseKey(name);
+  if(!key) return null;
+  if(HERBAL_CAUSE_CACHE[key]) return HERBAL_CAUSE_CACHE[key];
+  try{ const c = localStorage.getItem('hCauseC:' + key); if(c){ HERBAL_CAUSE_CACHE[key] = JSON.parse(c); return HERBAL_CAUSE_CACHE[key]; } }catch(e){}
+  if(!qmAiLive()) return null;
+  if(HERBAL_CAUSE_PENDING[key]) return HERBAL_CAUSE_PENDING[key];
+  HERBAL_CAUSE_PENDING[key] = (async ()=>{
+    let out = null;
+    try{ out = await herbalBookCausesFetch(key); }catch(e){ out = null; }
+    delete HERBAL_CAUSE_PENDING[key];
+    if(!out) return null;
+    HERBAL_CAUSE_CACHE[key] = out; // کتابوں میں نہ ملیں تب بھی اس بار کے لیے یاد رکھیں
+    if(!out.none){ try{ localStorage.setItem('hCauseC:' + key, JSON.stringify(out)); }catch(e){} }
+    return out;
+  })();
+  return HERBAL_CAUSE_PENDING[key];
+}
+function herbalCausesForAi(c){ return (c && c.causes) ? c.causes.map(x=> x.cause + (x.detail ? ' — ' + x.detail : '')) : []; }
+// ---- وجوہات صرف کتابوں (PDF) سے: پہلے متعلقہ صفحات ڈھونڈیں، پھر ان کی اصل تصویر AI کو دیں ----
+async function herbalWaitLibrary(ms){
+  const t0 = Date.now();
+  while(!(typeof pmLibrary !== 'undefined' && pmLibrary.length) && Date.now() - t0 < ms) await new Promise(r=> setTimeout(r, 300));
+}
+async function herbalGetDocForCauses(fe){
+  if(fe.pdfDoc) return fe.pdfDoc;
+  if(!fe.builtin) return null;
+  const path = pmResolvePdfPath(fe.fileName);
+  if(!path) return null;
+  const parts = PM_BUILTIN_PDF_PARTS[path] || PM_BUILTIN_PDF_PARTS[fe.fileName] || (await pmAutoParts(fe.fileName));
+  // پوری کتاب ڈاؤن لوڈ کیے بغیر صرف مطلوبہ صفحہ (range requests)
+  const doc = parts ? herbalMakeMultiPartPdfDoc(parts) : await pdfjsLib.getDocument({ url: path, disableAutoFetch: true, disableStream: true }).promise;
+  fe.pdfDoc = doc;
+  return doc;
+}
+async function herbalRenderBookPageImage(fe, pageNum){
+  const doc = await herbalGetDocForCauses(fe);
+  if(!doc) return null;
+  const raw = Math.floor(pageNum), left = (pageNum % 1) !== 0;
+  const page = await doc.getPage(raw);
+  const vp1 = page.getViewport({ scale: 1 });
+  const spread = vp1.width > vp1.height * 1.15;
+  const scale = Math.min(3, (spread ? 2200 : 1150) / vp1.width);
+  const vp = page.getViewport({ scale });
+  const c = document.createElement('canvas');
+  c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+  await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+  let out = c;
+  if(spread){
+    const half = Math.floor(c.width / 2);
+    out = document.createElement('canvas'); out.width = half; out.height = c.height;
+    out.getContext('2d').drawImage(c, left ? 0 : c.width - half, 0, half, c.height, 0, 0, half, c.height);
+  }
+  return out.toDataURL('image/jpeg', 0.7);
+}
+async function herbalBookCausesFetch(name){
+  await herbalWaitLibrary(15000);
+  if(typeof pmLibrary === 'undefined' || !pmLibrary.length || typeof pdfjsLib === 'undefined') return null;
+  const bookTitle = fe=> (fe.title ? fe.title.split(' — ')[0] : '') || fe.fileName.replace(/\.pdf$/i,'').replace(/_/g,' ');
+  const t = await qmFetchJson('/api/pm-ai-search', { mode:'terms', question: name + ' کے اسباب اور وجوہات' }, 20000);
+  const terms = [...new Set([name].concat(herbalOrganVariants(name, 10) || []).concat((t && t.terms) || []))];
+  const words = ((t && t.words) || []).concat(['اسباب','وجوہات','سبب','وجہ']);
+  const cands = pmAiCandidates(name, terms, words).filter(c=> c.fe.pdfDoc || (c.fe.builtin && pmResolvePdfPath(c.fe.fileName)));
+  if(!cands.length) return { causes: [], effects: [], searchTerms: [], none: true };
+  const top = cands.slice(0, 60);
+  const r = await qmFetchJson('/api/pm-ai-search', { mode:'rank', question: name + ' — اس مرض کے اسباب / وجوہات', understood: 'اس مرض کے اسباب (وجوہات) کس صفحے پر لکھے ہیں', candidates: top.map((c, i)=> ({ id:'c' + i, book: bookTitle(c.fe), page: String(c.p.printedPageNum || c.p.pageNum), text: c.snippet })) }, 30000);
+  let picks = ((r && r.results) || []).map(x=> top[parseInt(String(x.id).slice(1), 10)]).filter(Boolean);
+  if(!picks.length) picks = top.slice(0, 3);
+  const pages = [];
+  for(const c of picks){
+    if(pages.length >= 3) break;
+    try{ const img = await herbalRenderBookPageImage(c.fe, c.p.pageNum); if(img) pages.push({ c, img }); }catch(e){}
+  }
+  if(!pages.length) return null;
+  const sources = pages.map(x=> ({ fileName: x.c.fe.fileName, pageNum: x.c.p.pageNum, book: bookTitle(x.c.fe), display: x.c.p.printedPageNum || x.c.p.pageNum }));
+  const d = await qmFetchJson('/api/book-causes', { disease: name, pages: pages.map((x, i)=> ({ book: sources[i].book, page: String(sources[i].display), image: x.img })) }, 70000);
+  if(!d) return null;
+  const causes = (d.causes || []).map(cz=> ({ cause: cz.cause, detail: cz.detail, organ: '', src: sources[(cz.src || 1) - 1] || null }));
+  return { canonical: '', organ: d.organ || '', causes, effects: d.effects || [], searchTerms: causes.map(c=> c.cause).slice(0, 8), sources, fromBooks: true, none: !causes.length };
+}
+
+// ---- وجہ کی تصدیق: کتابوں سے ملی وجوہات کے بارے میں مریض سے ہاں/نہیں سوال — پھر صرف اسی وجہ کے مطابق علاج ----
+// ctx: 'qm' (نسخہ سازی) | 'pm' (بیماری کی تلاش) | 'home' (تشخیص اور علاج)
+const HERBAL_CAUSE_CHOICE = {};   // ctx|name → وجہ کا نمبر (یا -1 = کوئی وجہ نہیں)
+const HERBAL_CAUSE_WAITERS = {};
+const HERBAL_CAUSE_UI = {};       // ctx → { name, c, title, q, onReset }
+function herbalCauseChoiceKey(ctx, name){ return ctx + '|' + herbalCauseKey(name); }
+function herbalCauseChoice(ctx, name){ const k = herbalCauseChoiceKey(ctx, name); return (k in HERBAL_CAUSE_CHOICE) ? HERBAL_CAUSE_CHOICE[k] : undefined; }
+function herbalChosenCause(ctx, name){
+  const c = herbalGetCausesCached(name); const i = herbalCauseChoice(ctx, name);
+  return (c && c.causes && i !== undefined && i >= 0) ? c.causes[i] : null;
+}
+function herbalNeedsCauseAnswer(ctx, name){
+  const c = herbalGetCausesCached(name);
+  return !!(c && c.causes && c.causes.length && herbalCauseChoice(ctx, name) === undefined);
+}
+function herbalWaitCauseChoice(ctx, name){
+  const k = herbalCauseChoiceKey(ctx, name);
+  if(k in HERBAL_CAUSE_CHOICE) return Promise.resolve(HERBAL_CAUSE_CHOICE[k]);
+  return new Promise(r=> (HERBAL_CAUSE_WAITERS[k] = HERBAL_CAUSE_WAITERS[k] || []).push(r));
+}
+function herbalSetupCauseUI(ctx, name, c, title, onReset){
+  const old = HERBAL_CAUSE_UI[ctx];
+  HERBAL_CAUSE_UI[ctx] = { name, c, title, q: (old && old.name === name) ? old.q : 0, onReset, auto: (old && old.name === name) ? old.auto : '' };
+  // صرف ایک وجہ ہو تو سوال کی ضرورت نہیں — خود بخود اسی کے مطابق علاج
+  if(c && c.causes && c.causes.length === 1 && herbalCauseChoice(ctx, name) === undefined){
+    HERBAL_CAUSE_UI[ctx].auto = 'single';
+    herbalSetCauseChoice(ctx, name, 0);
+  }
+}
+function herbalSetCauseChoice(ctx, name, choice){
+  const k = herbalCauseChoiceKey(ctx, name);
+  HERBAL_CAUSE_CHOICE[k] = choice;
+  (HERBAL_CAUSE_WAITERS[k] || []).forEach(r=> r(choice));
+  delete HERBAL_CAUSE_WAITERS[k];
+}
+function herbalAnswerCause(ctx, yes){
+  const ui = HERBAL_CAUSE_UI[ctx]; if(!ui || !ui.c) return;
+  const n = ui.c.causes.length;
+  let choice;
+  // سوال صرف پہلی (زیادہ اہم) وجوہات کا — آخری وجہ کا سوال نہیں: باقی سب "نہیں" ہوں تو وہی خود بخود
+  if(yes){ choice = ui.q; ui.auto = ''; }
+  else { ui.q++; if(ui.q >= n - 1){ choice = n - 1; ui.auto = 'last'; } }
+  if(choice !== undefined) herbalSetCauseChoice(ctx, ui.name, choice);
+  herbalRenderCauseBox(ctx);
+}
+function herbalResetCause(ctx){
+  const ui = HERBAL_CAUSE_UI[ctx]; if(!ui) return;
+  delete HERBAL_CAUSE_CHOICE[herbalCauseChoiceKey(ctx, ui.name)];
+  ui.q = 0; ui.auto = '';
+  herbalRenderCauseBox(ctx);
+  if(ui.onReset) ui.onReset();
+}
+function herbalRenderCauseBox(ctx){
+  const el = document.getElementById('hcBox-' + ctx);
+  if(el) el.outerHTML = herbalCauseBoxHtml(ctx);
+}
+function herbalCauseBoxHtml(ctx){
+  const ui = HERBAL_CAUSE_UI[ctx];
+  if(!ui || !ui.c) return `<div id="hcBox-${ctx}"></div>`;
+  const c = ui.c;
+  if(c.none || !c.causes || !c.causes.length){
+    return `<div id="hcBox-${ctx}" style="border:1px dashed var(--border); border-radius:10px; padding:8px 12px; margin:0 0 12px; color:var(--muted); font-size:.82rem;">📘 سائٹ کی کتابوں میں اس مرض کی وجوہات واضح طور پر نہیں ملیں — انتخاب مرض کے نام کے مطابق کیا گیا ہے۔</div>`;
+  }
+  const srcLink = x=> x && x.src ? ` <span onclick="pmOpenPdfAtPage('${escapeJsAttr(x.src.fileName)}', ${x.src.pageNum}, '')" style="cursor:pointer; color:var(--gold-soft); font-size:.75rem; border-bottom:1px dotted var(--gold-soft); white-space:nowrap;">📘 ${escapeHtmlSearch(x.src.book)} — صفحہ ${escapeHtmlSearch(String(x.src.display))}</span>` : '';
+  const choice = herbalCauseChoice(ctx, ui.name);
+  const list = `<ul style="margin:6px 18px 2px 0; padding:0; color:var(--text); font-size:.86rem; line-height:1.8;">
+      ${c.causes.map((x, i)=> `<li style="${choice !== undefined && choice >= 0 && choice !== i ? 'opacity:.5;' : ''}"><b>${escapeHtmlSearch(x.cause)}</b>${x.detail ? ' — <span style="color:var(--muted);">' + escapeHtmlSearch(x.detail) + '</span>' : ''}${srcLink(x)}</li>`).join('')}
+    </ul>`;
+  let ask = '';
+  if(choice === undefined){
+    const cur = c.causes[Math.min(ui.q, Math.max(0, c.causes.length - 2))];
+    ask = `<div style="border:1px solid var(--gold); border-radius:10px; padding:10px; margin-top:8px; text-align:center; background:rgba(212,175,55,0.08);">
+      <div style="color:var(--gold); font-weight:700; margin-bottom:8px;">❓ ${escapeHtmlSearch(cur.question || ('کیا مریض کو ' + cur.cause + ' ہے؟'))}</div>
+      <button class="btn" onclick="herbalAnswerCause('${ctx}', true)" style="border-radius:16px; padding:6px 22px; margin:0 4px;">ہاں</button>
+      <button class="btn secondary" onclick="herbalAnswerCause('${ctx}', false)" style="border-radius:16px; padding:6px 22px; margin:0 4px;">نہیں</button>
+      <div style="color:var(--muted); font-size:.72rem; margin-top:6px;">${c.causes.length > 2 ? `سوال ${ui.q + 1} از ${c.causes.length - 1} — ` : ''}"نہیں" ہو تو ${ui.q + 1 >= c.causes.length - 1 ? `خود بخود "${escapeHtmlSearch(c.causes[c.causes.length - 1].cause)}" کے مطابق علاج` : 'اگلا سوال'}</div>
+    </div>`;
+  }else{
+    const nm = choice >= 0 ? escapeHtmlSearch(c.causes[choice].cause) : '';
+    const msg = choice < 0 ? `مرض کے نام کے مطابق عام علاج`
+      : ui.auto === 'single' ? `✅ کتابوں میں ایک ہی وجہ ملی: <b>${nm}</b> — علاج اسی کے مطابق`
+      : ui.auto === 'last' ? `✅ پوچھی گئی وجہ نہیں — اس لیے وجہ: <b>${nm}</b> — علاج اسی کے مطابق`
+      : `✅ تصدیق شدہ وجہ: <b>${nm}</b> — علاج اسی کے مطابق`;
+    ask = `<div style="margin-top:8px; color:var(--gold); font-size:.88rem;">${msg} <span onclick="herbalResetCause('${ctx}')" ${ui.auto === 'single' ? 'hidden' : ''} style="cursor:pointer; color:var(--gold-soft); font-size:.75rem; border:1px solid var(--gold-soft); border-radius:12px; padding:1px 8px; margin-right:6px; white-space:nowrap;">🔄 جواب بدلیں</span></div>`;
+  }
+  return `<div id="hcBox-${ctx}" style="border:1px solid var(--gold-soft); border-radius:10px; padding:8px 12px; margin:0 0 12px; background:rgba(212,175,55,0.05);">
+    <div style="color:var(--gold); font-weight:700; font-size:.92rem;">📘 ${escapeHtmlSearch(ui.title || 'کتابوں کے مطابق اس مرض کی وجوہات')}${c.organ ? ' <span style="color:var(--gold-soft); font-weight:400; font-size:.8rem;">(عضو/تحریک: ' + escapeHtmlSearch(c.organ) + ')</span>' : ''}</div>
+    ${list}${ask}
+    <p style="color:var(--muted); font-size:.72rem; margin:6px 0 0;">وجوہات صرف سائٹ کی کتابوں سے لی گئی ہیں — حوالے پر ٹیپ کریں تو وہی صفحہ کھلے گا۔</p>
+  </div>`;
+}
+// AI کو بھیجنے کے لیے: صرف تصدیق شدہ وجہ
+function herbalCauseForAi(ctx, name){
+  const ch = herbalChosenCause(ctx, name);
+  return ch ? [ch.cause + (ch.detail ? ' — ' + ch.detail : '') + ' (یہی اس مریض کی وجہ ہے — علاج صرف اسی کے مطابق)'] : [];
+}
+
+function herbalCausesCardHtml(c, title){
+  if(!c) return '';
+  if(c.none || !c.causes || !c.causes.length){
+    return `<div style="border:1px dashed var(--border); border-radius:10px; padding:8px 12px; margin:0 0 12px; color:var(--muted); font-size:.82rem;">📘 سائٹ کی کتابوں میں اس مرض کی وجوہات واضح طور پر نہیں ملیں — انتخاب مرض کے نام کے مطابق کیا گیا ہے۔</div>`;
+  }
+  const srcLink = x=> x && x.src ? ` <span onclick="pmOpenPdfAtPage('${escapeJsAttr(x.src.fileName)}', ${x.src.pageNum}, '')" style="cursor:pointer; color:var(--gold-soft); font-size:.75rem; border-bottom:1px dotted var(--gold-soft); white-space:nowrap;">📘 ${escapeHtmlSearch(x.src.book)} — صفحہ ${escapeHtmlSearch(String(x.src.display))}</span>` : '';
+  return `<details open style="border:1px solid var(--gold-soft); border-radius:10px; padding:8px 12px; margin:0 0 12px; background:rgba(212,175,55,0.05);">
+    <summary style="cursor:pointer; color:var(--gold); font-weight:700; font-size:.92rem;">📘 ${escapeHtmlSearch(title || 'کتابوں کے مطابق اس مرض کی وجوہات')}${c.organ ? ' <span style="color:var(--gold-soft); font-weight:400; font-size:.8rem;">(عضو/تحریک: ' + escapeHtmlSearch(c.organ) + ')</span>' : ''}</summary>
+    <ul style="margin:6px 18px 2px 0; padding:0; color:var(--text); font-size:.86rem; line-height:1.8;">
+      ${c.causes.map(x=> `<li><b>${escapeHtmlSearch(x.cause)}</b>${x.detail ? ' — <span style="color:var(--muted);">' + escapeHtmlSearch(x.detail) + '</span>' : ''}${srcLink(x)}</li>`).join('')}
+    </ul>
+    <p style="color:var(--muted); font-size:.75rem; margin:4px 0 0;">یہ وجوہات صرف سائٹ کی کتابوں کے صفحات سے لی گئی ہیں (حوالے پر ٹیپ کریں تو وہی صفحہ کھلے گا)۔ انتخاب انہی کے مطابق کیا گیا ہے۔</p>
+  </details>`;
+}
 // ایک بیماری کے دوسرے نام (اردو، عربی، فارسی، ہندی، انگریزی) — ایک بار پوچھ کر یاد رکھیں
 async function qmGetSynonyms(name){
   name = String(name || '').trim();
@@ -3665,10 +3866,26 @@ async function qmAiEnhance(token){
   const dName = document.getElementById('qmDisease').value.trim();
   const status = document.getElementById('qmAiStatus');
   if(!t || !dName || !qmAiLive() || QM_ORGAN_WORDS.includes(dName) || herbalOrganCanonical(dName)){ if(status) status.innerHTML = ''; return; }
-  if(status) status.innerHTML = '⏳ کتابوں کے مطابق بہترین نسخہ تیار ہو رہا ہے...';
-  const syn = await qmGetSynonyms(dName);
+  window.qmAiBusy = true;
+  try{ await qmAiEnhanceRun(token, t, dName); }finally{ if(token === qmAiToken){ window.qmAiBusy = false; } }
+}
+async function qmAiEnhanceRun(token, t, dName){
+  const causesP = herbalGetCauses(dName);
+  qmRenderHerbs(null); // "وجوہات دیکھ رہا ہے" دکھانے کے لیے
+  const st0 = document.getElementById('qmAiStatus'); if(st0) st0.innerHTML = '📘 پہلے کتابوں میں اس مرض کی وجوہات تلاش ہو رہی ہیں، پھر انہی کے مطابق نسخہ...';
+  const [syn, causes] = await Promise.all([qmGetSynonyms(dName), Promise.race([causesP, new Promise(r=> setTimeout(()=> r(null), 75000))])]);
   if(token !== qmAiToken) return;
-  if(syn.synonyms.length) qmRenderHerbs(null); // دوسرے ناموں کے ساتھ مقامی انتخاب دوبارہ
+  if(causes){
+    herbalSetupCauseUI('qm', dName, causes, 'کتابوں کے مطابق اس مرض کی وجوہات', ()=> qmShowHerbs());
+    if(herbalNeedsCauseAnswer('qm', dName)){
+      qmRenderHerbs(null); // سوال دکھائیں
+      await herbalWaitCauseChoice('qm', dName);
+      if(token !== qmAiToken) return;
+    }
+  }
+  qmRenderHerbs(null); // تصدیق شدہ وجہ کے مطابق مقامی انتخاب
+  const status = document.getElementById('qmAiStatus');
+  if(status) status.innerHTML = '⏳ وجوہات کے مطابق کتابوں سے بہترین نسخہ تیار ہو رہا ہے...';
   const organName = document.getElementById('qmOrgan').value;
   const organT = parseInt(document.getElementById('qmOrganMizaj').value, 10) || 0;
   const { list, t1, t3 } = qmAiHerbPool(t, organT);
@@ -3677,10 +3894,11 @@ async function qmAiEnhance(token){
   const d = await qmFetchJson('/api/qm-ai-nuskha', {
     disease: dName, synonyms: syn.synonyms, diseaseTehreek: QM_T[t].name,
     k3: QM_T[t3].name, k2: QM_T[t1].name + ' ÷ ' + QM_T[t3].name, k1: QM_T[t1].name,
-    organ: organName, organMizaj: organT ? QM_T[organT].name : '', herbs: list, kushte
+    organ: organName, organMizaj: organT ? QM_T[organT].name : '', herbs: list, kushte,
+    causes: herbalCauseForAi('qm', dName), effects: (herbalChosenCause('qm', dName) || {}).effects || []
   }, 25000);
   if(token !== qmAiToken) return;
-  if(!d || !Array.isArray(d.herbs) || !d.herbs.length){ if(status) status.innerHTML = ''; return; }
+  if(!d || !Array.isArray(d.herbs) || !d.herbs.length){ window.qmAiBusy = false; qmRenderHerbs(null); const st2 = document.getElementById('qmAiStatus'); if(st2) st2.innerHTML = ''; return; }
   const ai = d.herbs.map(h=>{
     const p = list.find(x=> x.n === h.name); if(!p) return null;
     const base = QM_HERBS.find(x=> x.n === h.name);
@@ -3690,7 +3908,8 @@ async function qmAiEnhance(token){
     const k = h.role === 'disease' ? (p.t === t3 ? 3 : (p.t === t1 ? 1 : 0)) : h.role;
     return { n: h.name, t: p.t, f, r: 1, why: h.role === 'disease' ? 'fayda' : 'role', k, aiDisease: h.role === 'disease' };
   }).filter(Boolean);
-  if(!ai.length){ if(status) status.innerHTML = ''; return; }
+  if(!ai.length){ window.qmAiBusy = false; qmRenderHerbs(null); const st3 = document.getElementById('qmAiStatus'); if(st3) st3.innerHTML = ''; return; }
+  window.qmAiBusy = false;
   qmAiKushta = (d.kushta || []).map(k=> k.name);
   qmRenderHerbs(ai);
 }
@@ -3720,9 +3939,17 @@ function qmRenderHerbs(aiChosen){
   const isDis = h=> h.aiDisease || (!aiChosen && (h.why === 'fayda' || qmHerbScore(h.f, text) > 0));
   const disH = chosen.filter(isDis), supH = chosen.filter(h=> !isDis(h));
   const prevStatus = (document.getElementById('qmAiStatus') || {}).innerHTML || '';
-  step2.innerHTML = `${qmOrganOnlyHint(dName)}<p id="qmAiStatus" style="color:var(--gold-soft); font-size:.8rem; margin-bottom:6px;">${aiChosen ? '🤖 کتابوں اور طب یونانی کے مطابق AI کا تیار کردہ نسخہ' : prevStatus}</p><p style="color:var(--gold); font-size:.95rem; margin-bottom:8px;">🌿 ${text ? `"${escapeHtmlSearch(dName)}" کے لیے ` : ''}نسخے کے اجزاء:</p>
+  const qmCz = herbalGetCausesCached(dName);
+  const qmCzPending = !qmCz && qmAiLive() && !!HERBAL_CAUSE_PENDING[herbalCauseKey(dName)];
+  const qmUi = HERBAL_CAUSE_UI.qm;
+  const qmAsk = qmCz && qmUi && qmUi.name === dName && herbalNeedsCauseAnswer('qm', dName);
+  if(qmAsk){
+    step2.innerHTML = `${herbalCauseBoxHtml('qm')}<p style="color:var(--gold-soft); text-align:center; font-size:.88rem;">👆 پہلے اوپر سوال کا جواب دیں — پھر اسی وجہ کے مطابق جڑی بوٹیاں چنی جائیں گی۔</p>`;
+    return;
+  }
+  step2.innerHTML = `${qmOrganOnlyHint(dName)}${(qmCz && qmUi && qmUi.name === dName) ? herbalCauseBoxHtml('qm') : ''}${qmCzPending ? '<p style="color:var(--gold-soft); font-size:.82rem; margin-bottom:8px;">📘 کتابوں (PDF) میں اس مرض کی وجوہات تلاش ہو رہی ہیں...</p>' : ''}<p id="qmAiStatus" style="color:var(--gold-soft); font-size:.8rem; margin-bottom:6px;">${aiChosen ? '🤖 کتابوں اور طب یونانی کے مطابق AI کا تیار کردہ نسخہ' : prevStatus}</p><p style="color:var(--gold); font-size:.95rem; margin-bottom:8px;">🌿 ${text ? `"${escapeHtmlSearch(dName)}" کے لیے ` : ''}نسخے کے اجزاء:</p>
     <div style="border:1px solid var(--border); border-right:4px solid var(--gold); border-radius:10px; padding:10px 12px; margin-bottom:12px;">
-      ${disH.length ? `<div style="color:var(--gold-soft); font-size:.82rem;">مرض کے لیے</div>${disH.map(h=> qmHerbRow(h, true, h.why, h.k)).join('')}` : `<p style="color:#e0524f; font-size:.85rem;">اس نام سے مرض کی کوئی خاص بوٹی نہیں ملی — مرض کا پورا نام لکھیں (مثلاً "${escapeHtmlSearch(dName)} میں درد" یا "${escapeHtmlSearch(dName)} کی کمزوری")۔</p>`}
+      ${disH.length ? `<div style="color:var(--gold-soft); font-size:.82rem;">مرض کے لیے</div>${disH.map(h=> qmHerbRow(h, true, h.why, h.k)).join('')}` : (qmCzPending || window.qmAiBusy) ? `<p style="color:var(--gold-soft); font-size:.85rem;">⏳ وجوہات کے مطابق جڑی بوٹیاں چنی جا رہی ہیں...</p>` : (herbalChosenCause('qm', dName) ? `<p style="color:#e0524f; font-size:.85rem;">"${escapeHtmlSearch(herbalChosenCause('qm', dName).cause)}" کے لیے فہرست میں کوئی خاص بوٹی نہیں ملی — نیچے "دوسری جڑی بوٹیاں" میں سے منتخب کریں۔</p>` : `<p style="color:#e0524f; font-size:.85rem;">اس نام سے مرض کی کوئی خاص بوٹی نہیں ملی — مرض کا پورا نام لکھیں (مثلاً "${escapeHtmlSearch(dName)} میں درد" یا "${escapeHtmlSearch(dName)} کی کمزوری")۔</p>`)}
       ${supH.length ? `<div style="color:var(--gold-soft); font-size:.82rem; margin-top:10px; border-top:1px dashed var(--border); padding-top:8px;">ساتھ میں (طاقت، ہاضمہ، جراثیم کش)</div>${supH.map(h=> qmHerbRow(h, disH.length > 0, h.why, h.k)).join('')}` : ''}
       <details style="margin-top:8px;">
         <summary style="cursor:pointer; color:var(--gold-soft); font-size:.8rem;">دوسری جڑی بوٹیاں (${others.length})</summary>
@@ -4062,6 +4289,7 @@ function renderMizajResult(totals, answered){
     });
     html += `</div>`;
     resultDiv.innerHTML = html;
+    homeShowCauses(resultDiv);
     resultDiv.scrollIntoView({behavior:'smooth'});
     return;
   }
@@ -4439,6 +4667,7 @@ function renderMizajResult(totals, answered){
   </div>`;
 
   resultDiv.innerHTML = html;
+  homeShowCauses(resultDiv);
   resultDiv.scrollIntoView({behavior:'smooth'});
   if((window.lastAIPool && window.lastAIPool.length) || (window.lastAIFoods && window.lastAIFoods.length)){
     fetchAINuskha(null);
@@ -4452,6 +4681,38 @@ function isLiveDeployedPage(){
   }catch(e){ return false; }
 }
 
+// تشخیص کے نتیجے میں مریض کی تکلیف کی وجوہات (AI) — پہلے کارڈ کے فوراً بعد
+function homeCausesSource(){
+  const t = String(window.freeComplaintText || '').trim();
+  if(t) return t;
+  const info = window.lastAIPatientInfo;
+  return (info && Array.isArray(info.diseases) && info.diseases.length) ? info.diseases.join('، ') : '';
+}
+function homeShowCauses(resultDiv){
+  if(!resultDiv || typeof herbalGetCauses !== 'function') return;
+  const src = homeCausesSource();
+  if(!src) return;
+  if(!window.lastCausesPromise) window.lastCausesPromise = herbalGetCauses(src);
+  let box = document.getElementById('homeCausesBox');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'homeCausesBox';
+    box.style.marginTop = '14px';
+    const first = resultDiv.querySelector('.result-card');
+    if(first && first.parentNode) first.parentNode.insertBefore(box, first.nextSibling); else resultDiv.prepend(box);
+  }
+  const show = c=>{
+    const b = document.getElementById('homeCausesBox'); if(!b) return;
+    if(!c){ b.innerHTML = ''; return; }
+    herbalSetupCauseUI('home', src, c, 'کتابوں کے مطابق آپ کی تکلیف کی وجوہات', ()=> fetchAINuskha(null));
+    b.innerHTML = herbalCauseBoxHtml('home');
+  };
+  const cached = herbalGetCausesCached(src);
+  if(cached){ show(cached); return; }
+  if(!qmAiLive()){ box.innerHTML = ''; return; }
+  box.innerHTML = '<p style="color:var(--gold-soft); font-size:.85rem;">📘 کتابوں میں آپ کی تکلیف کی وجوہات تلاش ہو رہی ہیں...</p>';
+  Promise.resolve(window.lastCausesPromise).then(show);
+}
 async function fetchAINuskha(btn){
   const box = document.getElementById('ai-nuskha-result');
   const foodBox = document.getElementById('ai-food-result');
@@ -4477,6 +4738,24 @@ async function fetchAINuskha(btn){
   if(box) box.innerHTML = '<p style="color:var(--muted);">⏳ بہترین دوا تلاش کی جا رہی ہے...</p>';
   if(foodBox) foodBox.innerHTML = '<p style="color:var(--muted);">⏳ موزوں غذائیں تلاش کی جا رہی ہیں...</p>';
   if(deficiencyBox) deficiencyBox.innerHTML = '<p style="color:var(--muted);">⏳ جائزہ لیا جا رہا ہے...</p>';
+  // پہلے تکلیف کی وجوہات (زیادہ سے زیادہ 12 سیکنڈ انتظار) — دوا انہی کے مطابق
+  let homeCauses = null;
+  try{
+    const src = homeCausesSource();
+    if(src){
+      if(!window.lastCausesPromise) window.lastCausesPromise = herbalGetCauses(src);
+      homeCauses = await Promise.race([Promise.resolve(window.lastCausesPromise), new Promise(r=> setTimeout(()=> r(null), 60000))]);
+      if(homeCauses && herbalNeedsCauseAnswer('home', src)){
+        // مریض سے وجہ کی تصدیق — جواب کے بعد ہی دوا
+        if(!HERBAL_CAUSE_UI.home || HERBAL_CAUSE_UI.home.name !== src){ herbalSetupCauseUI('home', src, homeCauses, 'کتابوں کے مطابق آپ کی تکلیف کی وجوہات', ()=> fetchAINuskha(null)); const hb = document.getElementById('homeCausesBox'); if(hb) hb.innerHTML = herbalCauseBoxHtml('home'); }
+        if(box) box.innerHTML = '<p style="color:var(--gold-soft);">👆 اوپر "وجوہات" والے خانے میں سوال کا جواب دیں — پھر اسی وجہ کے مطابق دوا بتائی جائے گی۔</p>';
+        if(foodBox) foodBox.innerHTML = '';
+        await herbalWaitCauseChoice('home', src);
+        if(box) box.innerHTML = '<p style="color:var(--muted);">⏳ تصدیق شدہ وجہ کے مطابق بہترین دوا تلاش کی جا رہی ہے...</p>';
+        if(foodBox) foodBox.innerHTML = '<p style="color:var(--muted);">⏳ موزوں غذائیں تلاش کی جا رہی ہیں...</p>';
+      }
+    }
+  }catch(e){}
   try{
     const res = await fetch('/api/select-nuskha', {
       method: 'POST',
@@ -4498,6 +4777,8 @@ async function fetchAINuskha(btn){
         season: info.season,
         tiryaqPreference: info.tiryaqPreference,
         treatGroup: info.treatGroup,
+        causes: herbalCauseForAi('home', homeCausesSource()),
+        complaint: String(window.freeComplaintText || '').slice(0, 400),
         hasDiseaseOrSymptom: (info.diseases && info.diseases.length > 0) || (info.symptoms && info.symptoms.length > 0)
       })
     });
@@ -4613,6 +4894,24 @@ async function submitDeficiencyAnswers(btn, count){
   }
   if(btn) btn.disabled = true;
   if(deficiencyBox) deficiencyBox.innerHTML = '<p style="color:var(--muted);">⏳ جائزہ لیا جا رہا ہے...</p>';
+  // پہلے تکلیف کی وجوہات (زیادہ سے زیادہ 12 سیکنڈ انتظار) — دوا انہی کے مطابق
+  let homeCauses = null;
+  try{
+    const src = homeCausesSource();
+    if(src){
+      if(!window.lastCausesPromise) window.lastCausesPromise = herbalGetCauses(src);
+      homeCauses = await Promise.race([Promise.resolve(window.lastCausesPromise), new Promise(r=> setTimeout(()=> r(null), 60000))]);
+      if(homeCauses && herbalNeedsCauseAnswer('home', src)){
+        // مریض سے وجہ کی تصدیق — جواب کے بعد ہی دوا
+        if(!HERBAL_CAUSE_UI.home || HERBAL_CAUSE_UI.home.name !== src){ herbalSetupCauseUI('home', src, homeCauses, 'کتابوں کے مطابق آپ کی تکلیف کی وجوہات', ()=> fetchAINuskha(null)); const hb = document.getElementById('homeCausesBox'); if(hb) hb.innerHTML = herbalCauseBoxHtml('home'); }
+        if(box) box.innerHTML = '<p style="color:var(--gold-soft);">👆 اوپر "وجوہات" والے خانے میں سوال کا جواب دیں — پھر اسی وجہ کے مطابق دوا بتائی جائے گی۔</p>';
+        if(foodBox) foodBox.innerHTML = '';
+        await herbalWaitCauseChoice('home', src);
+        if(box) box.innerHTML = '<p style="color:var(--muted);">⏳ تصدیق شدہ وجہ کے مطابق بہترین دوا تلاش کی جا رہی ہے...</p>';
+        if(foodBox) foodBox.innerHTML = '<p style="color:var(--muted);">⏳ موزوں غذائیں تلاش کی جا رہی ہیں...</p>';
+      }
+    }
+  }catch(e){}
   try{
     const res = await fetch('/api/select-nuskha', {
       method: 'POST',
@@ -4634,6 +4933,8 @@ async function submitDeficiencyAnswers(btn, count){
         season: info.season,
         tiryaqPreference: info.tiryaqPreference,
         treatGroup: info.treatGroup,
+        causes: herbalCauseForAi('home', homeCausesSource()),
+        complaint: String(window.freeComplaintText || '').slice(0, 400),
         hasDiseaseOrSymptom: (info.diseases && info.diseases.length > 0) || (info.symptoms && info.symptoms.length > 0),
         deficiencyAnswers: answers
       })
@@ -6213,13 +6514,15 @@ function pmRunSearch(customTerms){
   pmAiSmartSearch(q, customTerms && customTerms.length ? customTerms : [q]);
 }
 function pmAiBoxEl(){
-  let box = document.getElementById('pmAiBox');
+  let box = document.getElementById('pmAiBox') || pmAiState.boxEl; // نتائج دوبارہ بننے پر بھی وہی خانہ (سوال سمیت) رہے
+  pmAiState.boxEl = box || null;
   if(!box){
     box = document.createElement('div');
     box.id = 'pmAiBox';
     box.className = 'mujarrab-card';
     box.style.cssText = 'border:2px solid var(--gold); margin-bottom:14px;';
   }
+  pmAiState.boxEl = box;
   if(box.parentNode !== pmResultsEl || pmResultsEl.firstChild !== box) pmResultsEl.insertBefore(box, pmResultsEl.firstChild);
   return box;
 }
@@ -6300,32 +6603,46 @@ async function pmAiSmartSearch(question, baseTerms){
 async function pmAiSmartSearchRun(question, baseTerms){
   const token = ++pmAiState.token;
   pmAiState.question = question;
-  const cached = pmAiState.cache[question];
   const box = pmAiBoxEl();
-  if(cached){ pmAiState.understood = cached.understood || ''; pmAiState.words = cached.words || []; pmAiRender(box, cached); return; }
-  box.innerHTML = `<p style="color:var(--gold); margin:0;">🤖 AI آپ کا سوال سمجھ کر سب کتابوں میں دیکھ رہا ہے...</p>`;
-  const t = await qmFetchJson('/api/pm-ai-search', { mode:'terms', question }, 20000);
+  const ckey = ()=> question + '|' + String(herbalCauseChoice('pm', question));
+  const cached0 = pmAiState.cache[ckey()];
+  if(cached0 && !herbalNeedsCauseAnswer('pm', question)){ pmAiState.cacheKey = ckey(); pmAiState.understood = cached0.understood || ''; pmAiState.words = cached0.words || []; pmAiRender(box, cached0); return; }
+  box.innerHTML = `<p style="color:var(--gold); margin:0;">📘 پہلے کتابوں میں اس مرض کی وجوہات تلاش ہو رہی ہیں...</p>`;
+  const [t, cz] = await Promise.all([qmFetchJson('/api/pm-ai-search', { mode:'terms', question }, 20000), Promise.race([herbalGetCauses(question), new Promise(r=> setTimeout(()=> r(null), 75000))])]);
   if(token !== pmAiState.token) return;
-  const terms = [...new Set(baseTerms.concat((t && t.terms) || []))];
-  const words = (t && t.words) || [];
+  pmAiState.causes = cz;
+  if(cz){
+    herbalSetupCauseUI('pm', question, cz, 'کتابوں کے مطابق اس مرض کی وجوہات', ()=>{ pmAiState.busy = false; pmAiSmartSearch(question, baseTerms); });
+    if(herbalNeedsCauseAnswer('pm', question)){
+      pmAiBoxEl().innerHTML = herbalCauseBoxHtml('pm') + `<p style="color:var(--gold-soft); font-size:.85rem; margin:4px 0 0; text-align:center;">👆 پہلے سوال کا جواب دیں — پھر اسی وجہ کے مطابق کتابوں میں جواب ڈھونڈا جائے گا۔</p>`;
+      await herbalWaitCauseChoice('pm', question);
+      if(token !== pmAiState.token) return;
+    }
+    const cached1 = pmAiState.cache[ckey()];
+    if(cached1){ pmAiState.cacheKey = ckey(); pmAiRender(pmAiBoxEl(), cached1); return; }
+    pmAiBoxEl().innerHTML = herbalCauseBoxHtml('pm') + `<p style="color:var(--gold); margin:0;">🤖 اسی وجہ کے مطابق سب کتابوں میں جواب تلاش ہو رہا ہے...</p>`;
+  }
+  const chPm = herbalChosenCause('pm', question);
+  const terms = [...new Set(baseTerms.concat((t && t.terms) || []).concat(chPm ? [chPm.cause] : []))];
+  const words = ((t && t.words) || []).concat(chPm ? (chPm.effects || []).slice(0, 6) : []);
   pmAiState.understood = (t && t.understood) || '';
   pmAiState.words = words.concat(((t && t.terms) || []).slice(0, 6));
   const cands = pmAiCandidates(question, terms, words);
   if(!cands.length){
-    const res = { understood: t && t.understood, items: [] };
-    pmAiState.cache[question] = res; pmAiRender(pmAiBoxEl(), res); return;
+    const res = { understood: t && t.understood, items: [], causes: cz };
+    pmAiState.cache[ckey()] = res; pmAiState.cacheKey = ckey(); pmAiRender(pmAiBoxEl(), res); return;
   }
   const payload = cands.map((c, i)=> ({ id:'c' + i, book: c.fe.title || c.fe.fileName.replace(/\.pdf$/i,'').replace(/_/g,' '), page: String(c.p.printedPageNum || c.p.pageNum), text: c.snippet }));
-  const r = await qmFetchJson('/api/pm-ai-search', { mode:'rank', question, understood: t && t.understood, candidates: payload }, 30000);
+  const r = await qmFetchJson('/api/pm-ai-search', { mode:'rank', question, understood: t && t.understood, causes: herbalCauseForAi('pm', question), candidates: payload }, 30000);
   if(token !== pmAiState.token) return;
   if(!r){ pmAiBoxEl().innerHTML = `<p style="color:var(--muted); margin:0; font-size:.85rem;">🤖 AI سے ابھی رابطہ نہیں ہو سکا — نیچے الفاظ کی بنیاد پر نتائج ہیں۔</p>`; return; }
   const items = (r.results || []).map(x=>{ const c = cands[parseInt(String(x.id).slice(1), 10)]; return c ? { fileName: c.fe.fileName, book: c.fe.title || c.fe.fileName.replace(/\.pdf$/i,'').replace(/_/g,' '), pageNum: c.p.pageNum, display: c.p.printedPageNum || c.p.pageNum, score: x.score, reason: x.reason } : null; }).filter(Boolean);
-  const res = { understood: t && t.understood, items, words: pmAiState.words };
-  pmAiState.cache[question] = res;
+  const res = { understood: t && t.understood, items, words: pmAiState.words, causes: cz };
+  pmAiState.cache[ckey()] = res; pmAiState.cacheKey = ckey();
   pmAiRender(pmAiBoxEl(), res);
 }
 function pmAiOpenItem(i){
-  const res = pmAiState.cache[pmAiState.question];
+  const res = pmAiState.cache[pmAiState.cacheKey || pmAiState.question];
   const it = res && res.items[i];
   if(!it) return;
   window.pmPendingAiHint = it.reason || '';
@@ -6333,7 +6650,8 @@ function pmAiOpenItem(i){
 }
 function pmAiRender(box, res){
   const head = `<h4 style="color:var(--gold); margin:0 0 4px;">🤖 AI کے مطابق آپ کے سوال کا جواب یہاں ہے</h4>` +
-    (res.understood ? `<p style="color:var(--gold-soft); font-size:.8rem; margin:0 0 8px;">سوال: ${escapeHtmlSearch(res.understood)}</p>` : '');
+    (res.understood ? `<p style="color:var(--gold-soft); font-size:.8rem; margin:0 0 8px;">سوال: ${escapeHtmlSearch(res.understood)}</p>` : '') +
+    (res.causes ? herbalCauseBoxHtml('pm') : '');
   if(!res.items.length){
     box.innerHTML = head + `<p style="color:var(--muted); font-size:.85rem; margin:0;">AI کو کتابوں میں اس سوال کا واضح جواب نہیں ملا — نیچے الفاظ کی بنیاد پر نتائج دیکھیں، یا سوال دوسرے الفاظ میں لکھیں۔</p>`;
     return;
