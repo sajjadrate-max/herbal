@@ -704,11 +704,44 @@ knownMizajChoices.forEach((opt, i)=>{
   const box = document.createElement('div');
   box.className = 'diag-box';
   box.id = `opt-known_mizaj-${i}`;
-  box.onclick = ()=> selectOption('known_mizaj', i);
+  box.onclick = ()=> selectKnownMizaj(i);
   box.innerHTML = `<span class="opt-text">${opt.label}</span>`;
   knownMizajOpts.appendChild(box);
 });
 fieldOptionLabels['known_mizaj'] = knownMizajChoices;
+// مزاج منتخب ہوتے ہی باقی مزاج چھپ جائیں — صرف منتخب کیا ہوا نظر آئے۔ مزاج معلوم ہو تو علامات کے سوال نہیں پوچھے جاتے
+function hasKnownMizaj(){ return selections['known_mizaj'] !== undefined; }
+function selectKnownMizaj(i){
+  selectOption('known_mizaj', i);
+  const panel = document.getElementById('field-panel-known_mizaj');
+  const arrow = document.getElementById('field-arrow-known_mizaj');
+  if(panel) panel.style.display = 'none';
+  if(arrow) arrow.textContent = '▾';
+  const sum = document.getElementById('field-summary-known_mizaj');
+  if(sum){
+    sum.style.textAlign = 'center';
+    sum.innerHTML = `<b style="color:var(--gold); font-size:1.05rem;">${knownMizajChoices[i].label}</b>
+      <div style="margin-top:6px;"><span onclick="clearKnownMizaj(event)" style="cursor:pointer; color:var(--gold-soft); font-size:.8rem; border:1px solid var(--gold-soft); border-radius:12px; padding:2px 10px;">✕ مزاج ہٹائیں</span></div>`;
+  }
+  applyKnownMizajMode();
+}
+function clearKnownMizaj(ev){
+  if(ev) ev.stopPropagation();
+  delete selections['known_mizaj'];
+  window.forcedPatientNumber = undefined;
+  document.querySelectorAll('[id^="opt-known_mizaj-"]').forEach(el=> el.classList.remove('selected'));
+  const sum = document.getElementById('field-summary-known_mizaj');
+  if(sum){ sum.innerHTML = ''; sum.style.display = 'none'; }
+  applyKnownMizajMode();
+}
+function applyKnownMizajMode(){
+  const known = hasKnownMizaj();
+  const wrap = document.getElementById('diagnosisFieldsWrap');
+  if(wrap) wrap.style.display = known ? 'none' : '';
+  const statusEl = document.getElementById('complaintAnalysisStatus');
+  if(statusEl && known) statusEl.textContent = 'مزاج منتخب ہے — اب علامات کے سوال نہیں پوچھے جائیں گے۔ اپنی تکلیف لکھ کر "تشخیص اور علاج" دبائیں۔';
+  else if(statusEl && /مزاج منتخب ہے/.test(statusEl.textContent)) statusEl.textContent = '';
+}
 
 // ---------- مریض کی مکمل تکلیف (فری ٹیکسٹ) پڑھ کر صرف متعلقہ سوالات دکھانا ----------
 window.freeComplaintText = '';
@@ -723,6 +756,7 @@ const optionalQuestionDefs = criteria
   ]);
 
 function showAllDiagnosisFields(){
+  if(hasKnownMizaj()){ document.getElementById('combinedWrap').style.display = ''; applyKnownMizajMode(); computeMizaj(); return; }
   document.querySelectorAll('#optionalFieldsContainer > div').forEach(el=> el.style.display = '');
   document.getElementById('combinedWrap').style.display = '';
 }
@@ -755,6 +789,7 @@ function onDiseaseSelectionChanged(){
 
 async function fetchDiseaseRelatedQuestions(){
   if(!isLiveDeployedPageForComplaint()) return;
+  if(hasKnownMizaj()) return; // مزاج معلوم ہے — علامات کے سوال نہیں
   const selectedNames = diseaseIds
     .filter(d=> document.getElementById(d.id) && document.getElementById(d.id).checked)
     .map(d=> d.name);
@@ -786,6 +821,7 @@ function isLiveDeployedPageForComplaint(){
 async function analyzeComplaint(){
   const text = document.getElementById('freeComplaintText').value.trim();
   const statusEl = document.getElementById('complaintAnalysisStatus');
+  if(!text && hasKnownMizaj()){ computeMizaj(); return; } // صرف مزاج منتخب ہے — سیدھا نتیجہ
   if(!text){
     if(statusEl) statusEl.textContent = 'براہ کرم پہلے اپنی تکلیف لکھیں۔';
     return;
@@ -820,6 +856,14 @@ async function analyzeComplaint(){
       }
     });
 
+    if(hasKnownMizaj()){
+      // مزاج پہلے سے معلوم — علامات کے سوال نہ دکھائیں، سیدھا علاج
+      document.getElementById('combinedWrap').style.display = '';
+      applyKnownMizajMode();
+      if(statusEl) statusEl.textContent = 'منتخب مزاج کے مطابق علاج دکھایا جا رہا ہے...';
+      computeMizaj();
+      return;
+    }
     showOnlyRelevantFields(relevantIds);
 
     if(relevantIds.length === 0){
