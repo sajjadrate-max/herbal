@@ -11,6 +11,8 @@
 
 export const config = { api: { bodyParser: { sizeLimit: '4mb' } } };
 
+export const maxDuration = 60;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
