@@ -968,7 +968,8 @@ async function analyzeComplaint(){
     return;
   }
   window.freeComplaintText = text;
-  window.lastCausesPromise = herbalGetCauses(text); // AI پہلے تکلیف کی وجوہات نکالے — دوا انہی کے مطابق
+  // وجوہات ابھی نہیں — جب مریض علامات منتخب کر کے "مزاج کی تشخیص اور علاج" دبائے، تب نتیجے کے ساتھ شروع ہوں
+  window.lastCausesPromise = null; window.homeCausesSrcDone = '';
   if(!isLiveDeployedPageForComplaint()){
     if(statusEl) statusEl.textContent = 'یہ سہولت صرف لائیو ویب سائٹ پر کام کرتی ہے — تمام سوالات دکھائے جا رہے ہیں۔';
     showAllDiagnosisFields();
