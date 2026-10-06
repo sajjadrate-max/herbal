@@ -962,6 +962,23 @@ function homeRiskInfo(text, diseases, childInfo, ageGroup, ageGiven){
   if((diseases || []).length >= 4) reasons.push('مریض زیادہ پیچیدہ ہے (کئی بیماریاں ایک ساتھ)');
   return { risk: reasons.length > 0, reasons };
 }
+// ہر گھر میں ملنے والی عام غذائیں (مزاج کی لمبی فہرست میں سے صرف یہی دکھائی جائیں)
+const HOME_COMMON_FOODS = ['دودھ','دہی','لسی','انڈا','دیسی گھی','مکھن','شہد','گڑ','کھجور','بادام','اخروٹ','کشمش','انجیر','چنے','کالے چنے','دال مونگ','پھول مونگ کی دال','دال مسور','دال ماش','چاول','دلیہ','جو','گوشت مرغ','دیسی مرغی','بکرے کا گوشت','مچھلی','کدو','لوکی','ٹینڈے','توری','بھنڈی','پالک','میتھی','ساگ','سرسوں کا ساگ','شلجم','گاجر','مولی','گوبھی','آلو','ٹماٹر','کھیرا','ادرک','لہسن','پودینہ','ہلدی','زیرہ','سونف','سیب','کیلا','امرود','انار','مالٹا','کینو','انگور','آم','خربوزہ','تربوز','پپیتا','ناشپاتی','آلو بخارا','جامن','آڑو','لیموں'];
+// موسمی چیزیں — صرف انہی مہینوں میں (باقی سارا سال)
+const HOME_SEASON_MONTHS = { 'آم':[5,6,7,8], 'خربوزہ':[5,6,7,8], 'تربوز':[5,6,7,8], 'جامن':[6,7], 'آڑو':[6,7,8], 'آلو بخارا':[6,7], 'مالٹا':[11,12,1,2,3], 'کینو':[11,12,1,2,3], 'ناشپاتی':[7,8,9,10], 'انگور':[6,7,8,9], 'انار':[9,10,11,12,1],
+  'ساگ':[11,12,1,2], 'سرسوں کا ساگ':[11,12,1,2], 'شلجم':[11,12,1,2], 'گاجر':[11,12,1,2,3], 'مولی':[11,12,1,2,3], 'میتھی':[10,11,12,1,2,3], 'پالک':[10,11,12,1,2,3], 'گوبھی':[11,12,1,2,3],
+  'ٹینڈے':[4,5,6,7,8,9], 'توری':[4,5,6,7,8,9], 'بھنڈی':[4,5,6,7,8,9], 'لوکی':[4,5,6,7,8,9,10], 'کدو':[4,5,6,7,8,9,10], 'لسی':[4,5,6,7,8,9] };
+function homeFoodInSeason(name, month){ const m = HOME_SEASON_MONTHS[name]; return !m || m.includes(month); }
+function homeShortFoodsHtml(list){
+  const month = new Date().getMonth() + 1;
+  const seen = new Set();
+  const picks = (list || []).map(x=> String(x || '').trim()).filter(x=> {
+    if(!x || seen.has(x) || !HOME_COMMON_FOODS.includes(x) || !homeFoodInSeason(x, month)) return false;
+    seen.add(x); return true;
+  }).slice(0, 8);
+  if(!picks.length) return '';
+  return `<p style="color:var(--text); font-size:.95rem; margin:0;">${picks.map(escapeHtmlSearch).join('، ')}</p>`;
+}
 // علاج کے آخر میں لازمی وضاحت — ویب سائٹ ڈاکٹر/حکیم نہیں
 const HERBAL_DISCLAIMER_HTML = `<div style="margin-top:16px; border:1px solid #e0a050; border-radius:10px; padding:8px 12px; background:rgba(224,160,80,0.07);">
   <p style="color:var(--text); font-size:.82rem; margin:0;"><b style="color:#e0a050;">📢 نوٹ:</b> یہ ویب سائٹ ہے، ڈاکٹر یا حکیم نہیں — معلومات کے لیے ہے۔ استعمال سے پہلے معالج سے مشورہ کریں؛ کسی نقصان کی ذمہ داری ویب سائٹ پر نہیں۔</p>
@@ -5084,22 +5101,12 @@ function renderMizajResult(totals, answered){
     const HOME_MED_IN_FOOD = /^(جمال گوٹہ|سنا مکی|سونا|کچلہ|افیون|بھنگ|دھتورہ|رسکپور|سم الفار|ہڑتال)$/;
     const riskNow = !!(window.homeRisk && window.homeRisk.risk);
     window.lastAIFoods = foodListText ? foodListText.split(/[،,]/).map(s=> s.trim()).filter(Boolean).filter(x=> !(riskNow && HOME_MED_IN_FOOD.test(x))) : [];
-    let ghizaPanelHtml = ghizaPanel.innerHTML;
-    if(riskNow){
-      const tmp = document.createElement('div'); tmp.innerHTML = ghizaPanelHtml;
-      tmp.querySelectorAll('.food-list').forEach(el=>{
-        const m = el.innerHTML.match(/^([\s\S]*?غذائیں[^<]*<\/[a-z]+>\s*:?\s*)?([\s\S]*)$/);
-        const head = (m && m[1]) || ''; const body = (m && m[2]) || el.innerHTML;
-        if(/<[a-z]/i.test(body)) return; // ساخت سمجھ نہ آئے تو چھیڑیں نہیں
-        el.innerHTML = head + body.split(/\s*[،,]\s*/).filter(x=> x.trim() && !HOME_MED_IN_FOOD.test(x.trim())).join('، ');
-      });
-      ghizaPanelHtml = tmp.innerHTML;
-    }
+    // ایک ہی مختصر ڈبہ: لمبی فہرستیں (ناشتہ/دوپہر/شام/قہوہ) نہیں — صرف اہم، موسمی، ہر گھر والی غذائیں، بغیر دہرائے
+    window.homeShortFoodsHtml = homeShortFoodsHtml(window.lastAIFoods);
     html += `<div class="result-card" style="margin-top:16px;">
-      <h3>${names[ghizaGroup]} مزاج کے مطابق غذائیں</h3>
-      <p style="color:var(--muted); font-size:.9rem; margin-bottom:10px;">${riskNow ? 'دوائی کے لیے کسی اچھے ڈاکٹر سے چیک اپ کروائیں — یہاں صرف غذائیں ہیں۔' : 'علاج کے ساتھ ساتھ یہ غذائیں بھی مفید رہیں گی۔'}</p>
-      <div id="ai-food-result" style="margin-bottom:14px;"></div>
-      ${ghizaPanelHtml}
+      <h3>تجویز کردہ غذائیں</h3>
+      ${riskNow ? '<p style="color:var(--muted); font-size:.85rem; margin-bottom:8px;">دوائی کے لیے کسی اچھے ڈاکٹر سے چیک اپ کروائیں — یہاں صرف غذائیں ہیں۔</p>' : ''}
+      <div id="ai-food-result">${window.homeShortFoodsHtml}</div>
     </div>`;
   }
 
@@ -5268,7 +5275,7 @@ async function fetchAINuskha(btn){
   }
   if(btn) btn.disabled = true;
   if(box) box.innerHTML = (info && info.highRisk) ? homeDoctorHtml(info.riskReasons) : '<p style="color:var(--muted);">⏳ بہترین دوا تلاش کی جا رہی ہے...</p>';
-  if(foodBox) foodBox.innerHTML = '<p style="color:var(--muted);">⏳ موزوں غذائیں تلاش کی جا رہی ہیں...</p>';
+  if(foodBox) foodBox.innerHTML = (window.homeShortFoodsHtml || '') + '<p style="color:var(--muted); font-size:.85rem;">⏳ بیماری کے مطابق غذائیں چنی جا رہی ہیں...</p>';
   if(deficiencyBox) deficiencyBox.innerHTML = '<p style="color:var(--muted);">⏳ جائزہ لیا جا رہا ہے...</p>';
   // پہلے تکلیف کی وجوہات (زیادہ سے زیادہ 12 سیکنڈ انتظار) — دوا انہی کے مطابق
   let homeCauses = null;
@@ -5340,27 +5347,18 @@ async function fetchAINuskha(btn){
 
     if(foodBox){
       const dp = data && data.dietPlan;
-      const dpHas = dp && ['vitamins','sabzi','fruit'].some(k=> Array.isArray(dp[k]) && dp[k].length);
+      const mNow = new Date().getMonth() + 1, seenF = new Set();
+      const clean = arr=> (Array.isArray(arr) ? arr : []).filter(x=> { const n = String((x && x.name) || '').trim(); if(!n || seenF.has(n) || !homeFoodInSeason(n, mNow)) return false; seenF.add(n); return true; }).slice(0, 3);
+      const parts = dp ? [['🥛','ملٹی وٹامن (قدرتی)', clean(dp.vitamins)], ['🥬','سبزی / سالن', clean(dp.sabzi)], ['🍎','فروٹ', clean(dp.fruit)]] : [];
+      const dpHas = parts.some(p=> p[2].length);
       if(dpHas){
-        const sec = (icon, title, arr)=> (Array.isArray(arr) && arr.length) ? `<div style="margin-top:10px;"><b style="color:var(--gold);">${icon} ${title}</b>${arr.map((x, i)=> `<div style="margin:4px 14px 0 0;"><b style="color:var(--gold);">${(i + 1).toLocaleString('ur-PK')}۔</b> <b style="color:var(--gold-soft);">${escapeHtmlSearch(x.name || '')}</b>${x.reason ? `<span style="color:var(--text); font-size:.86rem;"> — ${escapeHtmlSearch(x.reason)}</span>` : ''}</div>`).join('')}</div>` : '';
-        foodBox.innerHTML = `<div style="border:1px solid var(--gold); border-radius:10px; padding:14px; background:rgba(212,175,55,0.06);">
-          <h4 style="color:var(--gold); margin-bottom:4px;">بیماری کے مطابق مفید غذائیں (جو بیماری کو جلد ٹھیک یا کنٹرول کریں)</h4>
-          <p style="color:var(--muted); font-size:.78rem; margin:0;">عام ملنے والی، گھریلو اور اس موسم میں دستیاب چیزیں</p>
-          ${sec('🥛', 'ملٹی وٹامن (قدرتی)', dp.vitamins)}${sec('🥬', 'سبزی / سالن', dp.sabzi)}${sec('🍎', 'فروٹ', dp.fruit)}
-        </div>`;
+        foodBox.innerHTML = parts.filter(p=> p[2].length).map(([icon, title, arr])=> `<p style="margin:6px 0 0;"><b style="color:var(--gold);">${icon} ${title}:</b> <span style="color:var(--text);">${arr.map((x, i)=> `${i + 1}۔ ${escapeHtmlSearch(x.name)}`).join('، ')}</span></p>`).join('');
       } else if(!data || !data.foodSelections || !data.foodSelections.length){
-        foodBox.innerHTML = '';
+        foodBox.innerHTML = window.homeShortFoodsHtml || '';
       } else {
-        let foodHtml = `<div style="border:1px solid var(--gold); border-radius:10px; padding:14px; background:rgba(212,175,55,0.06);">`;
-        foodHtml += `<h4 style="color:var(--gold); margin-bottom:8px;">بیماری کے مطابق تجویز کردہ غذائیں</h4>`;
-        data.foodSelections.forEach(sel=>{
-          foodHtml += `<div style="margin-top:8px;">
-            <b style="color:var(--gold-soft);">${sel.name}</b>
-            ${sel.reason ? `<span style="color:var(--text); font-size:.88rem;"> — ${sel.reason}</span>` : ''}
-          </div>`;
-        });
-        foodHtml += `</div>`;
-        foodBox.innerHTML = foodHtml;
+        const seenS = new Set();
+        const names2 = data.foodSelections.map(x=> String(x.name || '').trim()).filter(n=> n && !seenS.has(n) && seenS.add(n)).slice(0, 8);
+        foodBox.innerHTML = `<p style="color:var(--text); font-size:.95rem; margin:0;">${names2.map(escapeHtmlSearch).join('، ')}</p>`;
       }
     }
 
@@ -5412,7 +5410,7 @@ async function fetchAINuskha(btn){
   }catch(err){
     const errMsg = '<p style="color:#e07a5f;">دوا معلوم نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔<br><span style="font-size:.8rem; color:var(--muted);">('+ (err && err.message ? err.message : err) +')</span></p>';
     if(box) box.innerHTML = errMsg;
-    if(foodBox) foodBox.innerHTML = '';
+    if(foodBox) foodBox.innerHTML = window.homeShortFoodsHtml || '';
     if(deficiencyBox) deficiencyBox.innerHTML = '';
     if(deficiencyFoodBox) deficiencyFoodBox.innerHTML = '';
   }finally{
