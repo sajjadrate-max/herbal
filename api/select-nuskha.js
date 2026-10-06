@@ -30,6 +30,11 @@ export default async function handler(req, res) {
     const { mizaj, patientNumber, symptoms, diseases, candidates, foods, age, maritalStatus, diseaseDuration, bloodPressure, painTiming, sugar, qabz, deficiencyAnswers } = req.body || {};
     const causesList = (Array.isArray((req.body || {}).causes) ? req.body.causes : []).slice(0, 7).map(x => String(x || '').slice(0, 220)).filter(Boolean);
     const complaintText = String((req.body || {}).complaint || '').slice(0, 400);
+    const isChild = !!(req.body || {}).isChild;
+    const clientHighRisk = !!(req.body || {}).highRisk;
+    const monthNum = parseInt((req.body || {}).month, 10) || (new Date().getMonth() + 1);
+    const MONTHS = ['جنوری','فروری','مارچ','اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر'];
+    const seasonText = (monthNum >= 11 || monthNum <= 2) ? 'سردی' : (monthNum <= 3 ? 'بہار' : (monthNum <= 6 ? 'گرمی' : (monthNum <= 9 ? 'برسات/گرمی' : 'خزاں')));
 
     if (!Array.isArray(candidates) || candidates.length === 0) {
       return res.status(400).json({ error: 'دواؤں کی فہرست (candidates) خالی یا غلط ہے۔' });
@@ -93,8 +98,19 @@ export default async function handler(req, res) {
 7) ہر شناخت شدہ کمی کی "reason" میں مریض کی بتائی گئی وہی علامت (یا اضافی جواب) لکھیں جس کی بنیاد پر یہ کمی کا امکان ظاہر ہوا۔ زیادہ سے زیادہ 3 اقسام بتائیں۔
 8) اگر کوئی کمی شناخت ہو، تو نیچے دی گئی (مزاج کے مطابق) غذاؤں کی فہرست میں سے — اسی فہرست میں سے، باہر سے کوئی غذا شامل نہ کریں — صرف وہی غذائیں منتخب کریں جو خاص طور پر اسی شناخت شدہ کمی کو دور کرنے کے لیے روایتی طور پر معروف ہیں۔ کسی غذا کو محض اس لیے شامل نہ کریں کہ وہ عمومی طور پر مفید ہے یا مزاج کے لیے اچھی ہے — تعلق صرف اور صرف شناخت شدہ کمی سے ہونا چاہیے۔ اگر فہرست میں کوئی غذا اس کمی کے لیے موزوں نہ ملے، یا کوئی کمی شناخت نہ ہوئی ہو، تو خالی "deficiencyFoodSelections": [] دیں۔
 
+زیادہ خطرے والا مریض (سب سے اہم اصول):
+9) اگر مریض زیادہ خطرے والا ہو — یعنی خطرناک بیماری (مثلاً کینسر، دل کا دورہ/سینے میں شدید درد، فالج، ٹی بی، گردے/جگر کا فیل ہونا، خون کی الٹی/پاخانے میں خون، بے ہوشی، جھٹکے/مرگی کا دورہ، سانس رکنا، شدید/تیز بخار، شدید چوٹ/حادثہ، زہر کھا لینا، حمل کی پیچیدگی)، چھوٹا بچہ، بوڑھا (تقریباً 60 سال سے زیادہ)، یا کئی بیماریوں والا پیچیدہ مریض — تو "highRisk": true کریں، "highRiskReason" میں ایک مختصر اردو جملہ لکھیں، اور "selections": [] بالکل خالی دیں (کوئی دوا نہیں)۔ ایسے مریض کو صرف غذائیں بتائی جائیں گی اور ڈاکٹر صاحب سے فوراً رابطے کا کہا جائے گا۔ عام مریض کے لیے "highRisk": false۔
+(اس صورت میں اوپر نکتہ 3الف کا "خالی نتیجہ نہ دیں" والا اصول لاگو نہیں۔)
+
+بیماری کے مطابق غذائی منصوبہ (dietPlan) — ہر مریض کے لیے لازمی:
+10) تین حصوں میں وہ غذائیں بتائیں جن کے کھانے سے یہی بیماری جلد ٹھیک ہو یا کنٹرول میں رہے:
+   - "vitamins": ملٹی وٹامن (قدرتی) — یعنی قدرتی چیزیں جو وٹامن/معدنیات کا ذریعہ ہوں (مثلاً دودھ، دہی، انڈا، کھجور، شہد، گڑ، بادام/خشک میوہ، چنے، دیسی گھی، لسی) — کوئی گولی/سپلیمنٹ نہیں۔
+   - "sabzi": سبزی / سالن — گھر میں پکنے والے عام پاکستانی سالن اور سبزیاں (مثلاً کدو، ٹینڈے، توری، پالک، میتھی، شلجم، گاجر، دال مونگ/مسور، لوکی)۔
+   - "fruit": فروٹ — عام ملنے والے پھل۔
+   شرائط: ہر حصے میں 2 سے 4 چیزیں؛ صرف عام، سستی، پاکستان/ایشیا کے گھروں میں ملنے والی چیزیں؛ موجودہ موسم (${seasonText}) میں ملنے والی موسمی چیزیں؛ مریض کے مزاج کے موافق — "دستیاب غذاؤں کی فہرست" میں موجود چیزوں کو ترجیح دیں؛ اور ہر ایک کا اسی بیماری کے لیے حقیقی فائدہ ہو۔ ہر چیز کے ساتھ "reason" میں ایک مختصر جملہ کہ یہ اس بیماری میں کیسے مدد کرتی ہے۔ بچے کے لیے نرم اور ہلکی غذائیں۔
+
 جواب صرف اس JSON شکل میں دیں، کوئی اضافی متن نہیں:
-{"selections":[{"name":"دوا کا صحیح نام (فہرست سے بالکل ویسا)","reason":"مختصر وجہ اردو میں، جس میں دوا کے فوائد سے وہ عین لفظ/فقرہ شامل ہو جو مریض کی بیماری/علامت سے میل کھاتا ہے"}],"foodSelections":[{"name":"غذا کا نام (فہرست سے بالکل ویسا)","reason":"مختصر وجہ اردو میں"}],"deficiencies":[{"category":"قسم کا اردو نام (مثلاً وٹامنز، معدنیات وغیرہ)","reason":"مختصر وجہ اردو میں، بیان کردہ علامت کا حوالہ دیتے ہوئے"}],"deficiencyFoodSelections":[{"name":"غذا کا نام (فہرست سے بالکل ویسا)","category":"کس کمی کے لیے ہے","reason":"مختصر وجہ اردو میں"}],"deficiencyQuestions":[{"question":"مختصر سوال اردو میں"}]}`;
+{"selections":[{"name":"دوا کا صحیح نام (فہرست سے بالکل ویسا)","reason":"مختصر وجہ اردو میں، جس میں دوا کے فوائد سے وہ عین لفظ/فقرہ شامل ہو جو مریض کی بیماری/علامت سے میل کھاتا ہے"}],"foodSelections":[{"name":"غذا کا نام (فہرست سے بالکل ویسا)","reason":"مختصر وجہ اردو میں"}],"deficiencies":[{"category":"قسم کا اردو نام (مثلاً وٹامنز، معدنیات وغیرہ)","reason":"مختصر وجہ اردو میں، بیان کردہ علامت کا حوالہ دیتے ہوئے"}],"deficiencyFoodSelections":[{"name":"غذا کا نام (فہرست سے بالکل ویسا)","category":"کس کمی کے لیے ہے","reason":"مختصر وجہ اردو میں"}],"deficiencyQuestions":[{"question":"مختصر سوال اردو میں"}],"highRisk":false,"highRiskReason":"","dietPlan":{"vitamins":[{"name":"...","reason":"..."}],"sabzi":[{"name":"...","reason":"..."}],"fruit":[{"name":"...","reason":"..."}]}}`;
 
     const deficiencyAnswersText = Array.isArray(deficiencyAnswers) && deficiencyAnswers.length
       ? deficiencyAnswers.map(a => `${a.question || ''} → ${a.answer || ''}`).join('\n')
@@ -102,8 +118,9 @@ export default async function handler(req, res) {
 
     const userPrompt = `مریض کا مزاج: ${mizaj || 'نامعلوم'}${patientNumber ? ' (نمبر ' + patientNumber + ')' : ''}
 عمر: ${age || 'نامعلوم'}
-بیماری کب سے ہے (نئی/پرانی): ${diseaseDuration || 'نامعلوم'}
-${complaintText ? 'مریض کی اپنی لکھی ہوئی تکلیف: ' + complaintText + '\n' : ''}${causesList.length ? 'تکلیف کی وجوہات (AI نے پہلے نکالیں):\n- ' + causesList.join('\n- ') + '\n' : ''}علامات: ${symptomsText}
+مہینہ/موسم: ${MONTHS[monthNum - 1] || ''} (${seasonText})
+${clientHighRisk ? 'اہم: سائٹ نے اس مریض کو زیادہ خطرے والا مریض قرار دیا ہے — کوئی دوا نہیں، "highRisk": true، صرف dietPlan۔\n' : ''}بیماری کب سے ہے (نئی/پرانی): ${diseaseDuration || 'نامعلوم'}
+${isChild ? 'اہم: مریض بچہ ہے (12 سال سے کم) — "مسہل" قسم کی کوئی دوا ہرگز منتخب نہ کریں، نہ تیز/زہریلی دوا؛ قبض میں صرف "ملین" یا ہلکی دوا۔\n' : ''}${complaintText ? 'مریض کی اپنی لکھی ہوئی تکلیف: ' + complaintText + '\n' : ''}${causesList.length ? 'تکلیف کی وجوہات (AI نے پہلے نکالیں):\n- ' + causesList.join('\n- ') + '\n' : ''}علامات: ${symptomsText}
 بیماریاں: ${diseasesText}
 ${deficiencyAnswersText ? ('\nمریض کے اضافی جوابات (کمی کی تشخیص کے لیے پوچھے گئے سوالات کے جواب):\n' + deficiencyAnswersText + '\n') : ''}
 دستیاب دواؤں کی فہرست:
@@ -152,13 +169,16 @@ ${foodList.length ? foodList.join('، ') : '(کوئی غذائی فہرست فر
       return res.status(502).json({ error: 'جواب میں دوائیوں کی فہرست موجود نہیں۔' });
     }
 
-    let selections = parsed.selections;
+    const aiHighRisk = !!parsed.highRisk;
+    const highRisk = clientHighRisk || aiHighRisk;
+    let selections = highRisk ? [] : parsed.selections;
+    if (isChild) selections = selections.filter(x => !/مسہل/.test(String(x && x.name || '')));
 
     // حفاظتی قدم (deterministic fallback): مریض نے کوئی علامت/بیماری بتائی ہو تو کبھی بھی
     // خالی نتیجہ نہ جائے — اگر AI نے کوئی دوا منتخب نہیں کی تو اسی مزاج کی عمومی
     // "ہاضم"/"ملین" دوا خود بخود شامل کر دی جائے (یہ ہمیشہ محفوظ اور مفید ہوتی ہیں)۔
     const hasSymptomOrDisease = (Array.isArray(symptoms) && symptoms.length > 0) || (Array.isArray(diseases) && diseases.length > 0);
-    if (selections.length === 0 && hasSymptomOrDisease) {
+    if (!highRisk && selections.length === 0 && hasSymptomOrDisease) {
       const fallbackPicks = [];
       const hazimMatch = candidates.find(c => /ہاضم/.test(c.name));
       const mulainMatch = candidates.find(c => /ملین/.test(c.name));
@@ -176,7 +196,12 @@ ${foodList.length ? foodList.join('، ') : '(کوئی غذائی فہرست فر
     const deficiencyFoodSelections = Array.isArray(parsed.deficiencyFoodSelections) ? parsed.deficiencyFoodSelections : [];
     const deficiencyQuestions = Array.isArray(parsed.deficiencyQuestions) ? parsed.deficiencyQuestions : [];
 
-    return res.status(200).json({ selections, foodSelections, deficiencies, deficiencyFoodSelections, deficiencyQuestions });
+    const cleanList = v => (Array.isArray(v) ? v : []).map(x => (typeof x === 'string' ? { name: x, reason: '' } : { name: String((x && x.name) || '').trim().slice(0, 50), reason: String((x && x.reason) || '').trim().slice(0, 160) })).filter(x => x.name).slice(0, 4);
+    const dp = parsed.dietPlan || {};
+    const dietPlan = { vitamins: cleanList(dp.vitamins), sabzi: cleanList(dp.sabzi), fruit: cleanList(dp.fruit) };
+    const highRiskReason = String(parsed.highRiskReason || '').trim().slice(0, 200);
+
+    return res.status(200).json({ selections, foodSelections, deficiencies, deficiencyFoodSelections, deficiencyQuestions, highRisk, highRiskReason, dietPlan });
 
   } catch (err) {
     console.error('select-nuskha error:', err);
