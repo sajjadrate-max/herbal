@@ -470,7 +470,7 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
         '<div style="display:flex; align-items:center; gap:10px; justify-content:center;"><span style="width:18px; height:18px; border:3px solid rgba(212,175,55,.3); border-top-color:var(--gold,#d4af37); border-radius:50%; display:inline-block; animation:hbspin .9s linear infinite; flex-shrink:0;"></span>' +
         '<b style="color:var(--gold,#d4af37); font-size:.95rem;">⏳ براہ کرم انتظار کریں — کام ہو رہا ہے</b></div>' +
         '<div id="herbalBusyText" style="color:#fff; font-size:.85rem; margin-top:4px;"></div>' +
-        '<div style="color:var(--gold-soft,#e8d48b); font-size:.75rem; margin-top:2px;">اس میں چند سیکنڈ سے ایک منٹ تک لگ سکتا ہے — صفحہ بند نہ کریں اور واپس نہ جائیں، جواب خود یہیں آ جائے گا۔</div>';
+        '<div style="color:var(--gold-soft,#e8d48b); font-size:.75rem; margin-top:2px;">ابھی انتظار کریں — صفحہ بند نہ کریں اور واپس نہ جائیں، جواب خود یہیں آ جائے گا۔</div>';
       document.body.appendChild(b);
     }
     return b;
@@ -480,7 +480,7 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
     const last = [...jobs.values()].pop();
     const secs = Math.round((Date.now() - startedAt) / 1000);
     const t = document.getElementById('herbalBusyText');
-    if(t) t.textContent = (last || 'کام جاری ہے') + '... (' + secs + ' سیکنڈ)';
+    if(t) t.textContent = (last || 'کام جاری ہے') + '...';
     b.style.display = 'block';
   }
   window.herbalBusyStart = function(label){
@@ -3996,6 +3996,49 @@ function herbalServerErrText(r, file){
   if(r.status === 504) return 'سرور کا وقت ختم ہو گیا (Vercel) — دوبارہ کوشش کریں۔';
   return 'سرور کی خرابی (' + r.status + ') — دوبارہ کوشش کریں۔';
 }
+
+// خواص المفردات کی تین کتابیں مزاج کے حساب سے بنی ہیں — جس حصے میں دوا ہو وہی اس کا مزاج، اور وہی صفحہ کتاب میں
+const HERBAL_KHAWAS_SECTIONS = [
+  { re:/Asabi/i, ranges:[[13,166,6],[167,9999,1]] },
+  { re:/Adalati/i, ranges:[[38,285,2],[286,9999,3]] },
+  { re:/Ghudi/i, ranges:[[7,80,4],[81,9999,5]] }
+];
+function herbalKhawasFind(name){
+  if(typeof hzLibrary === 'undefined') return null;
+  const vars = (typeof hzQueryVariants === 'function' ? hzQueryVariants(name) : [name]).slice(0, 5);
+  for(const sec of HERBAL_KHAWAS_SECTIONS){
+    const fe = hzLibrary.find(f=> /khawas/i.test(f.fileName) && sec.re.test(f.fileName));
+    if(!fe) continue;
+    for(const v of vars){
+      const qd = hzBuildSearchable(v);
+      if(!qd.searchable || qd.searchable.length < 2) continue;
+      for(const p of fe.pages){
+        const r = sec.ranges.find(x=> p.pageNum >= x[0] && p.pageNum <= x[1]);
+        if(!r || !p.text) continue;
+        if(hzFindMatch(p.text, qd)) return { t: r[2], fe, p };   // پہلا صفحہ جہاں نام آئے = دوا کا اپنا صفحہ
+      }
+    }
+  }
+  return null;
+}
+// حکیم صاحب کے بتائے ہوئے مزاج (جن بوٹیوں کا مزاج کتابوں میں نہیں ملا) — نام: تحریک نمبر (1 سے 6)
+// نئی بوٹی کا مزاج معلوم ہو تو یہاں شامل کریں، مثلاً: 'ناگرموتھا': 5,
+const HERBAL_OWNER_MIZAJ = {
+  'ناگرموتھا': 6, 'ناگر موتھا': 6, // اعصابی غدی
+};
+function herbalOwnerMizaj(name){
+  const n = hzNormName(name);
+  for(const k in HERBAL_OWNER_MIZAJ){ if(hzNormName(k) === n) return HERBAL_OWNER_MIZAJ[k]; }
+  return 0;
+}
+// جس بوٹی کا مزاج نہ ملے — حکیم صاحب کو ای میل (ہر نام صرف ایک بار)
+async function herbalNotifyUnknownHerbs(names, nuskha){
+  const list = [...new Set((names || []).map(x=> String(x || '').trim()).filter(Boolean))].filter(n=>{ try{ return !localStorage.getItem('hUnk:' + n); }catch(e){ return true; } });
+  if(!list.length || !qmAiLive()) return false;
+  const r = await herbalPostJson('/api/notify-disease', { unknownHerbs: list, nuskha: nuskha || '' }, 15000);
+  if(r && r.ok){ list.forEach(n=>{ try{ localStorage.setItem('hUnk:' + n, '1'); }catch(e){} }); return true; }
+  return false;
+}
 // ---- ایک جزو کی سائٹ والی معلومات (فوراً) ----
 const HERBAL_DARJA_SHORT = { d1:'درجہ 1 (غذا)', d2:'درجہ 2 (عام دوا)', d3:'درجہ 3 (تیز دوا)', d4:'درجہ 4 (زہریلی)' };
 function herbalLocalItem(name){
@@ -4005,12 +4048,22 @@ function herbalLocalItem(name){
   const my = (typeof QM_HERBS !== 'undefined') ? (QM_HERBS.find(h=> hzNormName(h.n) === hzNormName(base)) || QM_HERBS.find(h=> hzQueryVariants(base).some(v=> hzNormName(h.n) === hzNormName(v)))) : null;
   const dj = (!isK && typeof hzDarjaFind === 'function') ? hzDarjaFind(base) : null;
   const tk = (!isK && typeof hzTkFind === 'function') ? (hzTkFind(base).filter(x=> x.score >= 80)[0] || null) : null;
-  const t = km ? km.t : (my ? my.t : (dj ? dj.t : (tk ? tk.g.t : 0)));
-  return { name, base, isKushta: isK, t, mizaj: t ? ('نمبر ' + t + ' — ' + HERBAL_TK_NAMES[t]) : '', darja: dj ? HERBAL_DARJA_SHORT[dj.lvl] : '', faide: my ? my.f : '', kushtaNote: km ? km.note : '', fromKushtaList: !!km };
+  let kh = isK ? null : herbalKhawasFind(base);
+  if(!kh && !isK){
+    // "قلمی شورہ خاص" → "قلمی شورہ"، "نوشادر ٹھیکری" → "نوشادر"، "ناگرموتھا" → "ناگر موتھا"
+    const w = base.split(' ');
+    const tries = [];
+    for(let k = w.length - 1; k >= 1; k--) tries.push(w.slice(0, k).join(' '));
+    if(w.length === 1 && base.length >= 6) for(let i = 3; i <= base.length - 3; i++) tries.push(base.slice(0, i) + ' ' + base.slice(i));
+    for(const tr of tries){ if(tr.length < 3) continue; kh = herbalKhawasFind(tr); if(kh) break; }
+  }
+  const om = herbalOwnerMizaj(base) || herbalOwnerMizaj(name);
+  const t = om || (km ? km.t : (kh ? kh.t : (my ? my.t : (dj ? dj.t : (tk ? tk.g.t : 0)))));
+  return { name, base, isKushta: isK, t, mizaj: t ? ('نمبر ' + t + ' — ' + HERBAL_TK_NAMES[t]) : '', mizajSrc: om ? 'حکیم صاحب' : (km ? 'کشتہ جات فہرست' : (kh ? 'خواص المفردات' : (t ? 'سائٹ کی فہرست' : ''))), khawas: kh, darja: dj ? HERBAL_DARJA_SHORT[dj.lvl] : '', faide: my ? my.f : '', kushtaNote: km ? km.note : '', fromKushtaList: !!km };
 }
 // ---- مرکب نسخہ پہچاننا: "ناگرموتھا 50 گرام ہلدی 20 گرام" یا "ہلدی + ملٹھی + سونف" ----
 function herbalToLatinDigits(s){ return String(s).replace(/[۰-۹]/g, d=> '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g, d=> '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/٫/g, '.'); }
-const HERBAL_UNIT_G = { 'گرام':1, 'گ':1, 'g':1, 'gm':1, 'تولہ':12, 'تولے':12, 'ماشہ':1, 'ماشے':1, 'رتی':0.12, 'ملی':0.001, 'mg':0.001, 'حصہ':1, 'حصے':1, 'عدد':1, 'چمچ':5 };
+const HERBAL_UNIT_G = { 'گرام':1, 'گرم':1, 'گ':1, 'g':1, 'gm':1, 'gram':1, 'grm':1, 'تولہ':12, 'تولے':12, 'تولا':12, 'تولھہ':12, 'تولھا':12, 'تولہ۔':12, 'tola':12, 'ماشہ':1, 'ماشے':1, 'ماشا':1, 'رتی':0.12, 'ملی':0.001, 'mg':0.001, 'حصہ':1, 'حصے':1, 'عدد':1, 'دانے':1, 'چمچ':5 };
 function herbalParseNuskha(txt){
   const s = herbalToLatinDigits(txt).replace(/[+،,؛;\n]/g, ' ، ').replace(/\s+/g, ' ').trim();
   const toks = s.split(' ');
@@ -4038,10 +4091,12 @@ function herbalMixMizaj(parts){
   return { list, top: list[0] || null };
 }
 function herbalCompositeLocalHtml(parts, mix){
-  const rows = parts.map(p=> `<tr><td style="padding:4px 6px;"><b>${escapeHtmlSearch(p.name)}</b></td><td style="padding:4px 6px;">${escapeHtmlSearch(p.amount || '—')}</td><td style="padding:4px 6px;">${p.mizaj ? escapeHtmlSearch(p.mizaj) : '<span style="color:var(--muted);">سائٹ کی فہرست میں نہیں</span>'}${p.darja ? '<br><span style="color:var(--muted); font-size:.75rem;">' + escapeHtmlSearch(p.darja) + '</span>' : ''}</td><td style="padding:4px 6px; font-size:.8rem;">${escapeHtmlSearch(p.faide || '')}</td></tr>`).join('');
-  const mixHtml = mix.top ? `<div style="margin-top:8px;"><b style="color:var(--gold);">پورے نسخے کا مزاج (مقدار کے حساب سے):</b> ${mix.list.map(x=> `نمبر ${x.t} ${escapeHtmlSearch(HERBAL_TK_NAMES[x.t])} — ${x.pct}%`).join('، ')}<br><span style="color:var(--gold-soft);">⇐ غالب: نمبر ${mix.top.t} — ${escapeHtmlSearch(HERBAL_TK_NAMES[mix.top.t])}</span></div>` : '';
+  const rows = parts.map(p=> `<tr><td style="padding:4px 6px;"><b>${escapeHtmlSearch(p.name)}</b></td><td style="padding:4px 6px;">${escapeHtmlSearch(p.amount || '—')}</td><td style="padding:4px 6px;">${p.mizaj ? escapeHtmlSearch(p.mizaj) + (p.mizajSrc ? '<br><span style="color:var(--muted); font-size:.72rem;">(' + escapeHtmlSearch(p.mizajSrc) + ')</span>' : '') : '<span style="color:#e0a050;">❓ اس کا مزاج معلوم نہیں</span>'}${p.darja ? '<br><span style="color:var(--muted); font-size:.75rem;">' + escapeHtmlSearch(p.darja) + '</span>' : ''}</td><td style="padding:4px 6px; font-size:.8rem;">${escapeHtmlSearch(p.faide || '')}</td></tr>`).join('');
+  const unk = parts.filter(p=> !p.t).map(p=> p.name);
+  const unkHtml = unk.length ? `<div style="margin-top:8px; color:#e0a050;">❓ ان کا مزاج معلوم نہیں: <b>${unk.map(escapeHtmlSearch).join('، ')}</b><div id="herbalUnkMail" style="color:var(--muted); font-size:.78rem;"></div></div>` : '';
+  const mixHtml = unkHtml + (!mix.top ? '' : `<div style="margin-top:8px;"><b style="color:var(--gold);">${unk.length ? `${unk.map(escapeHtmlSearch).join('، ')} کے علاوہ باقی اجزاء کے مطابق پورے نسخے کا مزاج` : 'پورے نسخے کا مزاج'} (مقدار کے حساب سے):</b> ${mix.list.map(x=> `نمبر ${x.t} ${escapeHtmlSearch(HERBAL_TK_NAMES[x.t])} — ${x.pct}%`).join('، ')}<br><span style="color:var(--gold-soft);">⇐ غالب: نمبر ${mix.top.t} — ${escapeHtmlSearch(HERBAL_TK_NAMES[mix.top.t])}</span></div>`);
   return `<div style="border:1px dashed var(--border); border-radius:8px; padding:8px 10px; margin-bottom:10px; font-size:.86rem;">
-    <div style="color:var(--gold-soft); margin-bottom:4px;">مرکب نسخہ — ${parts.length} اجزاء (سائٹ کی فہرست کے مطابق، فوراً):</div>
+    <div style="color:var(--gold-soft); margin-bottom:4px;">مرکب نسخہ — ${parts.length} اجزاء (خواص المفردات / کشتہ جات فہرست کے مطابق):</div>
     <div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse;"><tr style="color:var(--gold);"><th style="text-align:right; padding:4px 6px;">جزو</th><th style="text-align:right; padding:4px 6px;">مقدار</th><th style="text-align:right; padding:4px 6px;">مزاج</th><th style="text-align:right; padding:4px 6px;">فوائد</th></tr>${rows}</table></div>
     ${mixHtml}
   </div>`;
@@ -4061,7 +4116,12 @@ function herbalItemCands(name, isKushta, lib){
   const base = isKushta ? herbalKushtaBase(name) : name;
   const terms = [...new Set([name, base].concat(isKushta ? ['کشتہ ' + base] : []).concat(typeof hzQueryVariants === 'function' ? hzQueryVariants(base).slice(0, 4) : []))];
   let cands = pmAiCandidates(name, terms, [base, 'مزاج', 'خوراک', 'فوائد'], lib)
-    .filter(c=> c.fe.pdfDoc || (c.fe.builtin && pmResolvePdfPath(c.fe.fileName)));
+    .filter(c=> c.fe.pdfDoc || (c.fe.builtin && pmResolvePdfPath(c.fe.fileName)))
+    .filter(c=> /khawas|kushta/i.test(c.fe.fileName) || pmAiPageParts(c.fe)[c.p.pageNum] !== null); // خراب OCR متن والے صفحات نہیں (غلط میل دیتے ہیں)
+  if(!isKushta){
+    const kh = herbalKhawasFind(base);
+    if(kh && pmResolvePdfPath(kh.fe.fileName)){ kh.fe._lib = 'hz'; cands = [{ fe: kh.fe, p: kh.p, score: 999, snippet: kh.p.text.slice(0, 300) }].concat(cands.filter(c=> !(c.fe === kh.fe && c.p.pageNum === kh.p.pageNum))); }
+  }
   const big = c=> !!PM_BUILTIN_PDF_PARTS[c.fe.fileName];
   const pri = c=> (isKushta ? (/kushta/i.test(c.fe.fileName) ? 0 : 2) : (/khawas/i.test(c.fe.fileName) ? 0 : 2)) + (big(c) ? 3 : 0);
   return cands.map((c, i)=> ({ c, i })).sort((a,b)=> pri(a.c) - pri(b.c) || a.i - b.i).map(x=> x.c);
@@ -4094,10 +4154,9 @@ async function herbalItemInfo(){
   if(!qmAiLive()){ out.innerHTML = local + '<p style="color:var(--muted); font-size:.85rem;">کتابوں سے تفصیل صرف لائیو ویب سائٹ پر ملے گی۔</p>'; return; }
   // 2) کتابوں سے — ہر قدم پر سیکنڈ گنتے رہیں
   const t0 = Date.now(); let stepText = '';
-  const setStep = txt=>{ stepText = txt; const el = document.getElementById('itemInfoStatus'); if(el) el.textContent = '📘 ' + txt + ' (' + Math.round((Date.now() - t0) / 1000) + ' سیکنڈ)'; };
+  const setStep = txt=>{ stepText = txt; const el = document.getElementById('itemInfoStatus'); if(el) el.innerHTML = '⏳ <b>ابھی انتظار کریں — کام ہو رہا ہے</b><br><span style="font-size:.82rem;">' + escapeHtmlSearch(txt) + '</span>'; };
   out.innerHTML = local + '<p id="itemInfoStatus" style="color:var(--gold-soft);"></p>';
-  herbalItemInfo._timer = setInterval(()=>{ if(token !== herbalItemInfo._t){ clearInterval(herbalItemInfo._timer); return; } setStep(stepText); }, 1000);
-  const fail = msg=>{ clearInterval(herbalItemInfo._timer); if(token === herbalItemInfo._t) out.innerHTML = local + `<p style="color:#e0524f; font-size:.88rem;">${msg}</p>`; };
+  const fail = msg=>{ clearInterval(herbalItemInfo._timer); if(token === herbalItemInfo._t){ out.innerHTML = local + `<p style="color:#e0524f; font-size:.88rem;">${msg}</p>`; herbalItemNotifyUnknown(name, composite, parts, null); } };
   try{
     setStep('تمام کتابیں لوڈ ہو رہی ہیں...');
     await herbalWaitLibrary(15000);
@@ -4109,28 +4168,30 @@ async function herbalItemInfo(){
     if(composite){
       // ہر جزو کا ایک بہترین صفحہ (زیادہ سے زیادہ 4 اجزاء)
       for(const p of parts.slice(0, 4)){
-        const cs = herbalItemCands(p.base || p.name, p.isKushta, lib);
-        const c = cs.find(x=> !picks.some(y=> y.fe === x.fe && y.p.pageNum === x.p.pageNum));
-        if(c) picks.push(c);
+        let c = (p.khawas && pmResolvePdfPath(p.khawas.fe.fileName)) ? { fe: p.khawas.fe, p: p.khawas.p } : null;
+        if(c) c.fe._lib = 'hz';
+        if(!c){ const cs = herbalItemCands(p.base || p.name, p.isKushta, lib); c = cs.find(x=> !picks.some(y=> y.fe === x.fe && y.p.pageNum === x.p.pageNum)) || null; }
+        if(c && !picks.some(y=> y.fe === c.fe && y.p.pageNum === c.p.pageNum)) picks.push(c);
       }
     }else{
       const cands = herbalItemCands(name, isKushta, lib);
       if(!cands.length) return fail(`📘 کتابوں میں "${escapeHtmlSearch(name)}" کا ذکر نہیں ملا۔`);
       const top = cands.slice(0, 40);
+      if(cands[0] && cands[0].score === 999){ picks = [cands[0]].concat(cands.slice(1, 2)); } else {
       setStep('بہترین صفحات چنے جا رہے ہیں...');
       const r = await herbalWithTimeout(qmFetchJson('/api/pm-ai-search', { mode:'rank', question: name + ' — اس کا مزاج، درجہ، خوراک، فوائد، اجزاء / ترکیب', understood: 'اس دوا/کشتے/نسخے کی تفصیل کس صفحے پر لکھی ہے', candidates: top.map((c, i)=> ({ id:'c' + i, book: bookTitle(c.fe), page: String(c.p.printedPageNum || c.p.pageNum), text: c.snippet })) }, 25000), 26000);
       if(token !== herbalItemInfo._t) return;
       picks = ((r && r.results) || []).map(x=> top[parseInt(String(x.id).slice(1), 10)]).filter(Boolean);
       if(!picks.length) picks = top.slice(0, 3);
+      }
     }
     if(!picks.length) return fail('📘 کتابوں میں ان اجزاء کا ذکر نہیں ملا — اوپر سائٹ کی فہرست والی معلومات دیکھیں۔');
-    const pages = [];
-    for(const c of picks){
-      if(pages.length >= (composite ? 4 : 3)) break;
-      setStep(`کتاب "${bookTitle(c.fe)}" کا صفحہ کھولا جا رہا ہے...`);
-      try{ const img = await herbalWithTimeout(herbalRenderBookPageImage(c.fe, c.p.pageNum), 30000); if(img) pages.push({ c, img }); }catch(e){}
-      if(token !== herbalItemInfo._t) return;
-    }
+    // سب صفحات ایک ساتھ کھولیں (ایک ایک کر کے نہیں) — زیادہ سے زیادہ 35 سیکنڈ، جو تیار ہوں انہی سے آگے
+    setStep('کتابوں کے صفحات کھولے جا رہے ہیں...');
+    const use = picks.slice(0, composite ? 4 : 2);
+    const imgs = await Promise.all(use.map(c=> herbalWithTimeout(herbalRenderBookPageImage(c.fe, c.p.pageNum).catch(()=> null), 35000)));
+    if(token !== herbalItemInfo._t) return;
+    const pages = use.map((c, i)=> ({ c, img: imgs[i] })).filter(x=> x.img);
     if(!pages.length) return fail('کتاب کے صفحات کھل نہیں سکے (انٹرنیٹ سست ہو سکتا ہے) — دوبارہ کوشش کریں۔');
     const sources = pages.map(x=> ({ lib: x.c.fe._lib || 'pm', fileName: x.c.fe.fileName, pageNum: x.c.p.pageNum, book: bookTitle(x.c.fe), display: x.c.p.printedPageNum || x.c.p.pageNum }));
     setStep(`AI کتاب کے ${pages.length} صفحات پڑھ رہا ہے...`);
@@ -4146,9 +4207,27 @@ async function herbalItemInfo(){
     if(km){ d.mizaj = 'نمبر ' + km.t + ' — ' + km.name; }
     if(d.found){ HERBAL_ITEM_CACHE[cacheKey] = { d, sources }; try{ localStorage.setItem(cacheKey, JSON.stringify({ d, sources })); }catch(e){} }
     out.innerHTML = local + herbalPartsBookHtml(d, sources) + herbalItemResultHtml(name, d, sources);
+    herbalItemNotifyUnknown(name, composite, parts, d);
   }catch(e){
     fail('خرابی ہوئی — دوبارہ کوشش کریں۔');
   }
+}
+// جن کا مزاج نہ سائٹ میں ملا نہ کتابوں سے — حکیم صاحب کو ای میل
+async function herbalItemNotifyUnknown(name, composite, parts, d){
+  let unk = [];
+  if(composite){
+    const bookParts = (d && d.parts) || [];
+    unk = parts.filter(p=> !p.t && !bookParts.some(b=> b.mizaj && hzNormName(b.name) === hzNormName(p.name))).map(p=> p.name);
+  }else{
+    const l = herbalLocalItem(name);
+    if(!l.t && !(d && d.mizaj)) unk = [name];
+  }
+  if(!unk.length) return;
+  const sent = await herbalNotifyUnknownHerbs(unk, name);
+  const el = document.getElementById('herbalUnkMail');
+  const msg = sent ? '📧 حکیم صاحب کو ای میل بھیج دی گئی ہے کہ ان کا مزاج بتائیں — اگلی بار سے یہ سائٹ میں شامل ہوگا۔' : '📧 یہ نام حکیم صاحب کو پہلے ہی بھیجے جا چکے ہیں — مزاج ملتے ہی سائٹ میں شامل کر دیا جائے گا۔';
+  if(el) el.textContent = msg;
+  else{ const out = document.getElementById('itemInfoResult'); if(out) out.insertAdjacentHTML('beforeend', `<p style="color:#e0a050; font-size:.82rem;">❓ "${escapeHtmlSearch(unk.join('، '))}" کا مزاج معلوم نہیں۔ ${msg}</p>`); }
 }
 
 function herbalCausesCardHtml(c, title){
