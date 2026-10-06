@@ -444,6 +444,88 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
 <footer>Herbal — یہ صفحہ مکمل طور پر آف لائن کام کرتا ہے</footer>
 
 <script>
+// ===== "انتظار کریں" پٹی: جب بھی AI یا کتاب کا کوئی کام چل رہا ہو، نیچے صاف لکھا آئے کہ کام ہو رہا ہے =====
+(function(){
+  const LABELS = [
+    [/\/api\/pm-ai-search/, 'AI کتابوں میں آپ کا سوال تلاش کر رہا ہے'],
+    [/\/api\/book-causes/, 'AI کتابوں سے مرض کی وجوہات پڑھ رہا ہے'],
+    [/\/api\/book-item-info/, 'AI کتاب سے دوا / نسخے کی تفصیل پڑھ رہا ہے'],
+    [/\/api\/pm-locate/, 'AI صفحے پر جواب کی جگہ ڈھونڈ رہا ہے'],
+    [/\/api\/qm-ai-nuskha/, 'AI کتابوں کے مطابق نسخہ تیار کر رہا ہے'],
+    [/\/api\/select-nuskha/, 'AI آپ کے لیے دوا اور غذا چن رہا ہے'],
+    [/\/api\/select-questions/, 'AI آپ کی تکلیف سمجھ رہا ہے'],
+    [/\/api\/disease-synonyms/, 'AI بیماری کے دوسرے نام دیکھ رہا ہے'],
+    [/\/api\//, 'AI کام کر رہا ہے'],
+    [/\.pdf(\?|$)/i, 'کتاب کا صفحہ ڈاؤن لوڈ ہو رہا ہے']
+  ];
+  const jobs = new Map(); let seq = 0, startedAt = 0, timer = null, hideT = null, showT = null;
+  function el(){
+    let b = document.getElementById('herbalBusyBar');
+    if(!b){
+      b = document.createElement('div');
+      b.id = 'herbalBusyBar';
+      b.setAttribute('role', 'status');
+      b.style.cssText = 'display:none; position:fixed; left:50%; bottom:64px; transform:translateX(-50%); z-index:100000; width:min(94vw,520px); background:rgba(11,20,38,.97); border:2px solid var(--gold,#d4af37); border-radius:14px; padding:10px 14px; box-shadow:0 6px 24px rgba(0,0,0,.55); text-align:center; direction:rtl;';
+      b.innerHTML = '<style>@keyframes hbspin{to{transform:rotate(360deg)}}</style>' +
+        '<div style="display:flex; align-items:center; gap:10px; justify-content:center;"><span style="width:18px; height:18px; border:3px solid rgba(212,175,55,.3); border-top-color:var(--gold,#d4af37); border-radius:50%; display:inline-block; animation:hbspin .9s linear infinite; flex-shrink:0;"></span>' +
+        '<b style="color:var(--gold,#d4af37); font-size:.95rem;">⏳ براہ کرم انتظار کریں — کام ہو رہا ہے</b></div>' +
+        '<div id="herbalBusyText" style="color:#fff; font-size:.85rem; margin-top:4px;"></div>' +
+        '<div style="color:var(--gold-soft,#e8d48b); font-size:.75rem; margin-top:2px;">اس میں چند سیکنڈ سے ایک منٹ تک لگ سکتا ہے — صفحہ بند نہ کریں اور واپس نہ جائیں، جواب خود یہیں آ جائے گا۔</div>';
+      document.body.appendChild(b);
+    }
+    return b;
+  }
+  function render(){
+    const b = el();
+    const last = [...jobs.values()].pop();
+    const secs = Math.round((Date.now() - startedAt) / 1000);
+    const t = document.getElementById('herbalBusyText');
+    if(t) t.textContent = (last || 'کام جاری ہے') + '... (' + secs + ' سیکنڈ)';
+    b.style.display = 'block';
+  }
+  window.herbalBusyStart = function(label){
+    const id = ++seq;
+    if(!jobs.size && !timer){ startedAt = Date.now(); }
+    jobs.set(id, label || 'کام جاری ہے');
+    clearTimeout(hideT);
+    if(!timer){
+      clearTimeout(showT);
+      showT = setTimeout(()=>{ if(jobs.size){ render(); timer = setInterval(render, 1000); } }, 700); // بہت جلدی ختم ہونے والے کام پر پٹی نہ جھپکے
+    }else render();
+    return id;
+  };
+  window.herbalBusyEnd = function(id){
+    jobs.delete(id);
+    if(jobs.size){ if(timer) render(); return; }
+    // ایک قدم ختم ہو کر اگلا شروع ہونے کے درمیان پٹی غائب نہ ہو
+    clearTimeout(hideT);
+    hideT = setTimeout(()=>{
+      if(jobs.size) return;
+      clearTimeout(showT); clearInterval(timer); timer = null;
+      const b = document.getElementById('herbalBusyBar'); if(b) b.style.display = 'none';
+    }, 2500);
+  };
+  // سائٹ کی ہر AI درخواست اور کتاب کی ڈاؤن لوڈ خود بخود اس پٹی میں
+  const origFetch = window.fetch ? window.fetch.bind(window) : null;
+  if(origFetch){
+    window.fetch = function(input, init){
+      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      const hit = LABELS.find(([re])=> re.test(url));
+      if(!hit) return origFetch(input, init);
+      const id = window.herbalBusyStart(hit[1]);
+      const p = origFetch(input, init);
+      // جواب کا پورا متن آنے تک کام جاری سمجھیں
+      return p.then(res=>{
+        try{
+          const clone = res.clone();
+          clone.arrayBuffer().then(()=> window.herbalBusyEnd(id), ()=> window.herbalBusyEnd(id));
+        }catch(e){ window.herbalBusyEnd(id); }
+        return res;
+      }, err=>{ window.herbalBusyEnd(id); throw err; });
+    };
+  }
+})();
+
 // ---------- PAGE NAVIGATION ----------
 function showPage(id){
   document.querySelectorAll('.page-section').forEach(p=>p.classList.remove('active'));
@@ -3690,6 +3772,10 @@ async function herbalGetDocForCauses(fe){
   return doc;
 }
 async function herbalRenderBookPageImage(fe, pageNum){
+  const bz = window.herbalBusyStart ? window.herbalBusyStart('کتاب کا صفحہ کھول کر پڑھنے کے لیے تیار کیا جا رہا ہے') : 0;
+  try{ return await herbalRenderBookPageImageRaw(fe, pageNum); }finally{ if(window.herbalBusyEnd) window.herbalBusyEnd(bz); }
+}
+async function herbalRenderBookPageImageRaw(fe, pageNum){
   const doc = await herbalGetDocForCauses(fe);
   if(!doc) return null;
   const raw = Math.floor(pageNum), left = (pageNum % 1) !== 0;
