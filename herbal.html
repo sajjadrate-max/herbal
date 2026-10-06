@@ -944,19 +944,26 @@ function homeDetectChild(text){
 const HOME_DANGER_WORDS = ['کینسر','سرطان','ہارٹ اٹیک','دل کا دورہ','فالج','لقوہ','ٹی بی','تپ دق','تپدق','گردے فیل','ڈائلسز','ڈائیلاسز','خون کی الٹی','خون کی قے','قے میں خون','پاخانے میں خون','کھانسی میں خون','بے ہوش','بیہوش','بے ہوشی','دورے','مرگی','سانس رک','سانس بند','سانس نہیں','سینے میں درد','حاملہ','حمل','ایڈز','ہیپاٹائٹس','کالا یرقان','نمونیا','نمونیہ','ٹائیفائیڈ','ڈینگی','ملیریا','گردن توڑ','دماغ کی رسولی','رسولی','زہر','حادثہ','ایکسیڈنٹ','ہڈی ٹوٹ','آپریشن','سٹروک','اسٹروک','گینگرین','تیز بخار','شدید بخار'];
 function homeRiskInfo(text, diseases, childInfo, ageGroup, ageGiven){
   const reasons = [];
-  if(childInfo) reasons.push('مریض چھوٹا بچہ ہے (' + childInfo.label + ')');
-  if(ageGiven && ageGroup === 'old') reasons.push('مریض بڑی عمر کا ہے');
+  if(childInfo) reasons.push('یہ چھوٹا بچہ ہے (' + childInfo.label + ')');
+  if(ageGiven && ageGroup === 'old') reasons.push('مریض بڑی عمر کا (بوڑھا) ہے');
   const all = ' ' + String(text || '') + ' ' + (diseases || []).join(' ') + ' ';
   const hits = HOME_DANGER_WORDS.filter(w=> new RegExp('(^|[\\s،,۔.!؟?:()\\-])' + w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '($|[\\s،,۔.!؟?:()\\-])').test(all));
-  if(hits.length) reasons.push('خطرناک بیماری / علامت: ' + [...new Set(hits)].slice(0, 4).join('، '));
-  if((diseases || []).length >= 4) reasons.push('پیچیدہ مریض (کئی بیماریاں ایک ساتھ)');
+  if(hits.length) reasons.push('بیماری سنجیدہ نوعیت کی ہے (' + [...new Set(hits)].slice(0, 4).join('، ') + ')');
+  if((diseases || []).length >= 4) reasons.push('مریض زیادہ پیچیدہ ہے (کئی بیماریاں ایک ساتھ)');
   return { risk: reasons.length > 0, reasons };
 }
+// علاج کے آخر میں لازمی وضاحت — ویب سائٹ ڈاکٹر/حکیم نہیں
+const HERBAL_DISCLAIMER_HTML = `<div class="result-card" style="margin-top:18px; border:1px solid #e0a050; background:rgba(224,160,80,0.07);">
+  <h3 style="color:#e0a050; margin-bottom:6px;">📢 ضروری وضاحت</h3>
+  <p style="color:var(--text); font-size:.93rem; margin:0 0 6px;">یہ ایک ویب سائٹ ہے — کوئی ڈاکٹر یا حکیم نہیں۔ یہاں دی گئی تمام معلومات، نسخے اور غذائیں صرف معلومات کے لیے ہیں۔</p>
+  <p style="color:var(--text); font-size:.93rem; margin:0 0 6px;">کوئی بھی نسخہ یا دوا استعمال کرنے سے پہلے کسی مستند ڈاکٹر یا حکیم سے مشورہ ضرور کریں۔</p>
+  <p style="color:var(--gold-soft); font-size:.9rem; margin:0;">ان نسخوں یا دواؤں کے استعمال سے کوئی مسئلہ یا نقصان ہو تو اس کی ذمہ داری ویب سائٹ پر نہیں ہوگی — استعمال کرنے والا خود ذمہ دار ہوگا۔</p>
+</div>`;
 function homeDoctorHtml(reasons){
   return `<div style="border:2px solid #e0524f; border-radius:10px; padding:14px; background:rgba(224,82,79,0.08);">
-    <h4 style="color:#e0524f; margin:0 0 6px;">⚠ فوراً ڈاکٹر صاحب سے رابطہ کریں</h4>
-    <p style="color:var(--text); font-size:.9rem; margin:0 0 6px;">یہ خطرے والا مریض ہے، اس لیے سائٹ اس کے لیے کوئی دوائی نہیں بتاتی۔</p>
-    ${reasons && reasons.length ? `<p style="color:var(--muted); font-size:.82rem; margin:0 0 6px;">وجہ: ${reasons.map(escapeHtmlSearch).join(' — ')}</p>` : ''}
+    <h4 style="color:#e0524f; margin:0 0 6px;">🩺 کسی اچھے ڈاکٹر سے چیک اپ کروائیں</h4>
+    <p style="color:var(--text); font-size:.92rem; margin:0 0 6px;">${reasons && reasons.length ? reasons.map(escapeHtmlSearch).join('، ') + '، ' : ''}اس لیے اسے کسی اچھے ڈاکٹر سے چیک اپ کروائیں۔</p>
+    <p style="color:var(--text); font-size:.88rem; margin:0 0 6px;">یہ ویب سائٹ صرف معلومات کے لیے ہے، کوئی ڈاکٹر نہیں — اس لیے یہاں اس کے لیے کوئی دوائی نہیں بتائی گئی۔</p>
     <p style="color:var(--gold-soft); font-size:.85rem; margin:0;">نیچے صرف بیماری کے مطابق مفید غذائیں دی گئی ہیں۔</p>
   </div>`;
 }
@@ -5056,11 +5063,7 @@ function renderMizajResult(totals, answered){
       <div id="ai-nuskha-result" style="margin-top:14px;">${homeRisk.risk ? homeDoctorHtml(homeRisk.reasons) : '<p style="color:var(--muted);">⏳ بہترین دوا تلاش کی جا رہی ہے...</p>'}</div>
     </div>`;
 
-    html += `<div class="result-card" style="margin-top:16px;">
-      <h3>جسمانی ضروریات کی کمی کا جائزہ</h3>
-      <p style="color:var(--muted); font-size:.9rem; margin-bottom:10px;">بتائی گئی علامات کی بنیاد پر ممکنہ کمی کا اندازہ۔</p>
-      <div id="ai-deficiency-result" style="margin-top:14px;"><p style="color:var(--muted);">⏳ جائزہ لیا جا رہا ہے...</p></div>
-    </div>`;
+    // "جسمانی ضروریات کی کمی کا جائزہ" والا ڈبہ مالک کے کہنے پر ختم
   }
 
   // اسی (علاج والے) مزاج کی غذائیں — ہمیشہ سادہ اصول کے مطابق: اعصابی→عضلاتی، عضلاتی→غدی، غدی→اعصابی
@@ -5086,9 +5089,8 @@ function renderMizajResult(totals, answered){
     }
     html += `<div class="result-card" style="margin-top:16px;">
       <h3>${names[ghizaGroup]} مزاج کے مطابق غذائیں</h3>
-      <p style="color:var(--muted); font-size:.9rem; margin-bottom:10px;">${riskNow ? 'یہ مریض خطرے والا ہے — دوائی صرف ڈاکٹر صاحب دیں گے؛ یہاں صرف غذائیں ہیں۔' : 'علاج کے ساتھ ساتھ یہ غذائیں بھی مفید رہیں گی۔'}</p>
+      <p style="color:var(--muted); font-size:.9rem; margin-bottom:10px;">${riskNow ? 'دوائی کے لیے کسی اچھے ڈاکٹر سے چیک اپ کروائیں — یہاں صرف غذائیں ہیں۔' : 'علاج کے ساتھ ساتھ یہ غذائیں بھی مفید رہیں گی۔'}</p>
       <div id="ai-food-result" style="margin-bottom:14px;"></div>
-      <div id="ai-deficiency-food-result" style="margin-bottom:14px;"></div>
       ${ghizaPanelHtml}
     </div>`;
   }
@@ -5137,7 +5139,7 @@ function renderMizajResult(totals, answered){
       ]
     };
     const fruits = fruitByMizaj[dominant] || [];
-    if(fruits.length){
+    if(false && fruits.length){ // "کمزور مریض کے لیے پھل و ملٹی وٹامن" والا ڈبہ مالک کے کہنے پر ختم
       const fruitListHtml = fruits.map(f=> `<b style="color:var(--gold-soft);">${f.name}</b> — ${f.qty}`).join('<br>');
       html += `<div class="result-card" style="margin-top:16px;"><h3>کمزور مریض کے لیے پھل و ملٹی وٹامن</h3><p style="color:var(--text); font-size:.95rem; margin-bottom:8px;">${(window.homeRisk && window.homeRisk.risk) ? '' : 'شربت بزوری بذاتِ خود ایک ملٹی وٹامن ہے۔ اس کے علاوہ '}${names[dominant]} مزاج کے مطابق روزانہ یہ پھل بھی دیں:</p><p style="color:var(--text); font-size:.95rem;">${fruitListHtml}</p></div>`;
     }
@@ -5183,6 +5185,7 @@ function renderMizajResult(totals, answered){
     html += waramHtml;
   }
 
+  html += HERBAL_DISCLAIMER_HTML;
   html += `<div style="text-align:center; margin-top:24px; margin-bottom:10px;">
     <button class="btn" onclick="location.reload()" style="border-radius:24px; padding:12px 26px; font-size:.95rem;">🔄 نئی تشخیص کریں</button>
   </div>`;
@@ -5305,7 +5308,7 @@ async function fetchAINuskha(btn){
     const data = await res.json();
 
     if(box && ((info && info.highRisk) || (data && data.highRisk))){
-      box.innerHTML = homeDoctorHtml((info && info.riskReasons && info.riskReasons.length) ? info.riskReasons : [data.highRiskReason || 'AI کے مطابق یہ خطرے والی حالت ہے']);
+      box.innerHTML = homeDoctorHtml((info && info.riskReasons && info.riskReasons.length) ? info.riskReasons : [data.highRiskReason || 'مریض کی حالت زیادہ پیچیدہ ہے']);
     } else if(box){
       if(!data || !data.selections || !data.selections.length){
         box.innerHTML = '<p style="color:#e07a5f;">کوئی مناسب دوا تجویز نہیں ہو سکی — اوپر دی گئی فہرست سے انتخاب کریں۔</p>';
@@ -5331,7 +5334,7 @@ async function fetchAINuskha(btn){
       const dp = data && data.dietPlan;
       const dpHas = dp && ['vitamins','sabzi','fruit'].some(k=> Array.isArray(dp[k]) && dp[k].length);
       if(dpHas){
-        const sec = (icon, title, arr)=> (Array.isArray(arr) && arr.length) ? `<div style="margin-top:10px;"><b style="color:var(--gold);">${icon} ${title}</b>${arr.map(x=> `<div style="margin:4px 14px 0 0;"><b style="color:var(--gold-soft);">${escapeHtmlSearch(x.name || '')}</b>${x.reason ? `<span style="color:var(--text); font-size:.86rem;"> — ${escapeHtmlSearch(x.reason)}</span>` : ''}</div>`).join('')}</div>` : '';
+        const sec = (icon, title, arr)=> (Array.isArray(arr) && arr.length) ? `<div style="margin-top:10px;"><b style="color:var(--gold);">${icon} ${title}</b>${arr.map((x, i)=> `<div style="margin:4px 14px 0 0;"><b style="color:var(--gold);">${(i + 1).toLocaleString('ur-PK')}۔</b> <b style="color:var(--gold-soft);">${escapeHtmlSearch(x.name || '')}</b>${x.reason ? `<span style="color:var(--text); font-size:.86rem;"> — ${escapeHtmlSearch(x.reason)}</span>` : ''}</div>`).join('')}</div>` : '';
         foodBox.innerHTML = `<div style="border:1px solid var(--gold); border-radius:10px; padding:14px; background:rgba(212,175,55,0.06);">
           <h4 style="color:var(--gold); margin-bottom:4px;">بیماری کے مطابق مفید غذائیں (جو بیماری کو جلد ٹھیک یا کنٹرول کریں)</h4>
           <p style="color:var(--muted); font-size:.78rem; margin:0;">عام ملنے والی، گھریلو اور اس موسم میں دستیاب چیزیں</p>
