@@ -945,8 +945,9 @@ function homeDetectChild(text){
     const after = t.slice(m.index, m.index + 40);
     const isKid = /بچ[ہیے]|بیٹا|بیٹی|لڑکا|لڑکی|عمر/.test(after) || /عمر/.test(t.slice(Math.max(0, m.index - 12), m.index));
     if(!isKid) continue;
-    if(/ماہ|مہین|ہفت|دن/.test(unit)) return { child:true, label: m[1] + ' ' + unit + ' کا بچہ' };
-    if(n < 12) return { child:true, years:n, label: m[1] + ' سال کا بچہ' };
+    const girl = /بچی|بیٹی|لڑکی/.test(after);
+    if(/ماہ|مہین|ہفت|دن/.test(unit)) return { child:true, label: m[1] + ' ' + unit + (girl ? ' کی بچی' : ' کا بچہ') };
+    if(n < 10) return { child:true, years:n, label: m[1] + ' سال ' + (girl ? 'کی بچی' : 'کا بچہ') };
   }
   return null;
 }
@@ -954,13 +955,15 @@ function homeDetectChild(text){
 const HOME_DANGER_WORDS = ['کینسر','سرطان','ہارٹ اٹیک','دل کا دورہ','فالج','لقوہ','ٹی بی','تپ دق','تپدق','گردے فیل','ڈائلسز','ڈائیلاسز','خون کی الٹی','خون کی قے','قے میں خون','پاخانے میں خون','کھانسی میں خون','بے ہوش','بیہوش','بے ہوشی','دورے','مرگی','سانس رک','سانس بند','سانس نہیں','سینے میں درد','حاملہ','حمل','ایڈز','ہیپاٹائٹس','کالا یرقان','نمونیا','نمونیہ','ٹائیفائیڈ','ڈینگی','ملیریا','گردن توڑ','دماغ کی رسولی','رسولی','زہر','حادثہ','ایکسیڈنٹ','ہڈی ٹوٹ','آپریشن','سٹروک','اسٹروک','گینگرین','تیز بخار','شدید بخار'];
 function homeRiskInfo(text, diseases, childInfo, ageGroup, ageGiven){
   const reasons = [];
-  if(childInfo) reasons.push('یہ چھوٹا بچہ ہے (' + childInfo.label + ')');
+  if(childInfo) reasons.push('یہ ' + (/بچی/.test(childInfo.label) ? 'چھوٹی بچی' : 'چھوٹا بچہ') + ' ہے (' + childInfo.label + ')');
   if(ageGiven && ageGroup === 'old') reasons.push('مریض بڑی عمر کا (بوڑھا) ہے');
   const all = ' ' + String(text || '') + ' ' + (diseases || []).join(' ') + ' ';
   const hits = HOME_DANGER_WORDS.filter(w=> new RegExp('(^|[\\s،,۔.!؟?:()\\-])' + w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '($|[\\s،,۔.!؟?:()\\-])').test(all));
   if(hits.length) reasons.push('بیماری سنجیدہ نوعیت کی ہے (' + [...new Set(hits)].slice(0, 4).join('، ') + ')');
   if((diseases || []).length >= 4) reasons.push('مریض زیادہ پیچیدہ ہے (کئی بیماریاں ایک ساتھ)');
-  return { risk: reasons.length > 0, reasons };
+  // مالک کا اصول: دوائی صرف چھوٹے بچے کو نہیں — باقی سب مریض (سنجیدہ بیماری، بڑی عمر، پیچیدہ) کو علاج بتایا جائے، ساتھ ڈاکٹر سے چیک اپ کا مشورہ
+  const advice = reasons.filter((r, i)=> !(childInfo && i === 0));
+  return { risk: !!childInfo, reasons: childInfo ? [reasons[0]] : [], advice };
 }
 // ہر گھر میں ملنے والی عام غذائیں (مزاج کی لمبی فہرست میں سے صرف یہی دکھائی جائیں)
 const HOME_COMMON_FOODS = ['دودھ','دہی','لسی','انڈا','دیسی گھی','مکھن','شہد','گڑ','کھجور','بادام','اخروٹ','کشمش','انجیر','چنے','کالے چنے','دال مونگ','پھول مونگ کی دال','دال مسور','دال ماش','چاول','دلیہ','جو','گوشت مرغ','دیسی مرغی','بکرے کا گوشت','مچھلی','کدو','لوکی','ٹینڈے','توری','بھنڈی','پالک','میتھی','ساگ','سرسوں کا ساگ','شلجم','گاجر','مولی','گوبھی','آلو','ٹماٹر','کھیرا','ادرک','لہسن','پودینہ','ہلدی','زیرہ','سونف','سیب','کیلا','امرود','انار','مالٹا','کینو','انگور','آم','خربوزہ','تربوز','پپیتا','ناشپاتی','آلو بخارا','جامن','آڑو','لیموں'];
@@ -983,6 +986,10 @@ function homeShortFoodsHtml(list){
 const HERBAL_DISCLAIMER_HTML = `<div style="margin-top:16px; border:1px solid #e0a050; border-radius:10px; padding:8px 12px; background:rgba(224,160,80,0.07);">
   <p style="color:var(--text); font-size:.82rem; margin:0;"><b style="color:#e0a050;">📢 نوٹ:</b> یہ ویب سائٹ ہے، ڈاکٹر یا حکیم نہیں — معلومات کے لیے ہے۔ استعمال سے پہلے معالج سے مشورہ کریں؛ کسی نقصان کی ذمہ داری ویب سائٹ پر نہیں۔</p>
 </div>`;
+function homeAdviceHtml(advice){
+  if(!advice || !advice.length) return '';
+  return `<p style="color:#e0a050; font-size:.85rem; margin:0 0 8px; border:1px solid #e0a050; border-radius:8px; padding:6px 10px;">🩺 ${advice.map(escapeHtmlSearch).join('، ')} — علاج کے ساتھ کسی اچھے ڈاکٹر سے چیک اپ بھی ضرور کروائیں۔</p>`;
+}
 function homeDoctorHtml(reasons){
   return `<div style="border:2px solid #e0524f; border-radius:10px; padding:14px; background:rgba(224,82,79,0.08);">
     <h4 style="color:#e0524f; margin:0 0 6px;">🩺 کسی اچھے ڈاکٹر سے چیک اپ کروائیں</h4>
@@ -1115,7 +1122,7 @@ let ageAnswered = false;
 
 const ageOpts = document.getElementById('opts-age');
 const ageChoices = [
-  {label:'بچہ (12 سال سے کم)', group:'young', child:true},
+  {label:'بچہ / بچی (10 سال سے کم)', group:'young', child:true},
   {label:'15 سے 20 سال', group:'young'},
   {label:'30 سے 45 سال', group:'middle'},
   {label:'50 سال سے اوپر', group:'old'}
@@ -5027,7 +5034,7 @@ function renderMizajResult(totals, answered){
   const matchedHerbs = candidates;
 
   // قبض کا خاص اصول: کمزور مریض کو مسہل کی بجائے ملین (3 گولیاں) دیں
-  const homeChildInfo = homeDetectChild(window.freeComplaintText) || (window.homeAgeChild ? { child:true, label:'بچہ (12 سال سے کم)' } : null);
+  const homeChildInfo = homeDetectChild(window.freeComplaintText) || (window.homeAgeChild ? { child:true, label:'بچہ / بچی (10 سال سے کم)' } : null);
   window.homeChildInfo = homeChildInfo;
   const homeRisk = homeRiskInfo(window.freeComplaintText, selectedDiseaseNames, homeChildInfo, selectedAgeGroup, ageAnswered);
   window.homeRisk = homeRisk;
@@ -5102,11 +5109,11 @@ function renderMizajResult(totals, answered){
     const riskNow = !!(window.homeRisk && window.homeRisk.risk);
     window.lastAIFoods = foodListText ? foodListText.split(/[،,]/).map(s=> s.trim()).filter(Boolean).filter(x=> !(riskNow && HOME_MED_IN_FOOD.test(x))) : [];
     // ایک ہی مختصر ڈبہ: لمبی فہرستیں (ناشتہ/دوپہر/شام/قہوہ) نہیں — صرف اہم، موسمی، ہر گھر والی غذائیں، بغیر دہرائے
-    window.homeShortFoodsHtml = homeShortFoodsHtml(window.lastAIFoods);
+    window.homeShortFoodsBox = homeShortFoodsHtml(window.lastAIFoods);
     html += `<div class="result-card" style="margin-top:16px;">
       <h3>تجویز کردہ غذائیں</h3>
       ${riskNow ? '<p style="color:var(--muted); font-size:.85rem; margin-bottom:8px;">دوائی کے لیے کسی اچھے ڈاکٹر سے چیک اپ کروائیں — یہاں صرف غذائیں ہیں۔</p>' : ''}
-      <div id="ai-food-result">${window.homeShortFoodsHtml}</div>
+      <div id="ai-food-result">${window.homeShortFoodsBox}</div>
     </div>`;
   }
 
@@ -5275,7 +5282,7 @@ async function fetchAINuskha(btn){
   }
   if(btn) btn.disabled = true;
   if(box) box.innerHTML = (info && info.highRisk) ? homeDoctorHtml(info.riskReasons) : '<p style="color:var(--muted);">⏳ بہترین دوا تلاش کی جا رہی ہے...</p>';
-  if(foodBox) foodBox.innerHTML = (window.homeShortFoodsHtml || '') + '<p style="color:var(--muted); font-size:.85rem;">⏳ بیماری کے مطابق غذائیں چنی جا رہی ہیں...</p>';
+  if(foodBox) foodBox.innerHTML = (window.homeShortFoodsBox || '') + '<p style="color:var(--muted); font-size:.85rem;">⏳ بیماری کے مطابق غذائیں چنی جا رہی ہیں...</p>';
   if(deficiencyBox) deficiencyBox.innerHTML = '<p style="color:var(--muted);">⏳ جائزہ لیا جا رہا ہے...</p>';
   // پہلے تکلیف کی وجوہات (زیادہ سے زیادہ 12 سیکنڈ انتظار) — دوا انہی کے مطابق
   let homeCauses = null;
@@ -5322,7 +5329,7 @@ async function fetchAINuskha(btn){
     }
     const data = await res.json();
 
-    if(box && ((info && info.highRisk) || (data && data.highRisk))){
+    if(box && ((info && info.highRisk) || (data && data.highRisk && /بچ/.test(data.highRiskReason || '')))){
       box.innerHTML = homeDoctorHtml((info && info.riskReasons && info.riskReasons.length) ? info.riskReasons : [data.highRiskReason || 'مریض کی حالت زیادہ پیچیدہ ہے']);
     } else if(box){
       if(!data || !data.selections || !data.selections.length){
@@ -5331,6 +5338,7 @@ async function fetchAINuskha(btn){
         if(info && info.isChild) data.selections = data.selections.filter(sel=> !/مسہل/.test(sel.name)); // بچے کو مسہل کبھی نہیں
         let outHtml = `<div style="border:1px solid var(--gold); border-radius:10px; padding:14px; background:rgba(212,175,55,0.06);">`;
         outHtml += `<h4 style="color:var(--gold); margin-bottom:8px;">تجویز کردہ دوا</h4>`;
+        outHtml += homeAdviceHtml(window.homeRisk && window.homeRisk.advice);
         if(info && info.isChild) outHtml += `<p style="color:#e0a050; font-size:.85rem; margin:0 0 8px;">⚠ مریض بچہ ہے (${escapeHtmlSearch(info.age || '')}) — مسہل نہیں دی گئی۔ نیچے لکھی خوراک بڑوں کی ہے؛ بچے کی خوراک بہت کم ہوتی ہے، مقدار حکیم سے طے کرائیں۔</p>`;
         data.selections.forEach(sel=>{
           const match = pool.find(p=> p.name === sel.name);
@@ -5354,7 +5362,7 @@ async function fetchAINuskha(btn){
       if(dpHas){
         foodBox.innerHTML = parts.filter(p=> p[2].length).map(([icon, title, arr])=> `<p style="margin:6px 0 0;"><b style="color:var(--gold);">${icon} ${title}:</b> <span style="color:var(--text);">${arr.map((x, i)=> `${i + 1}۔ ${escapeHtmlSearch(x.name)}`).join('، ')}</span></p>`).join('');
       } else if(!data || !data.foodSelections || !data.foodSelections.length){
-        foodBox.innerHTML = window.homeShortFoodsHtml || '';
+        foodBox.innerHTML = window.homeShortFoodsBox || '';
       } else {
         const seenS = new Set();
         const names2 = data.foodSelections.map(x=> String(x.name || '').trim()).filter(n=> n && !seenS.has(n) && seenS.add(n)).slice(0, 8);
@@ -5410,7 +5418,7 @@ async function fetchAINuskha(btn){
   }catch(err){
     const errMsg = '<p style="color:#e07a5f;">دوا معلوم نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔<br><span style="font-size:.8rem; color:var(--muted);">('+ (err && err.message ? err.message : err) +')</span></p>';
     if(box) box.innerHTML = errMsg;
-    if(foodBox) foodBox.innerHTML = window.homeShortFoodsHtml || '';
+    if(foodBox) foodBox.innerHTML = window.homeShortFoodsBox || '';
     if(deficiencyBox) deficiencyBox.innerHTML = '';
     if(deficiencyFoodBox) deficiencyFoodBox.innerHTML = '';
   }finally{
