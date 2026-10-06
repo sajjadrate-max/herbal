@@ -487,10 +487,12 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
     if(t) t.textContent = (last || 'کام جاری ہے') + '...';
     b.style.display = 'block';
   }
+  const MAX_JOB_MS = 60000; // کوئی کام اٹک جائے تو پٹی زیادہ سے زیادہ 60 سیکنڈ بعد خود غائب
   window.herbalBusyStart = function(label){
     const id = ++seq;
     if(!jobs.size && !timer){ startedAt = Date.now(); }
     jobs.set(id, label || 'کام جاری ہے');
+    setTimeout(()=> { if(jobs.has(id)) window.herbalBusyEnd(id); }, MAX_JOB_MS);
     clearTimeout(hideT);
     if(!timer){
       clearTimeout(showT);
@@ -501,25 +503,33 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
   window.herbalBusyEnd = function(id){
     jobs.delete(id);
     if(jobs.size){ if(timer) render(); return; }
-    // ایک قدم ختم ہو کر اگلا شروع ہونے کے درمیان پٹی غائب نہ ہو
     clearTimeout(hideT);
     hideT = setTimeout(()=>{
       if(jobs.size) return;
       clearTimeout(showT); clearInterval(timer); timer = null;
       const b = document.getElementById('herbalBusyBar'); if(b) b.style.display = 'none';
-    }, 2500);
+    }, 600);
   };
+  function activePage(){ const a = document.querySelector('.page-section.active'); return a ? a.id : ''; }
+  // پس منظر کے کام (جواب آ جانے کے بعد) پر پٹی نہیں: Home پر کتاب سے وجوہات، اور Home/نسخہ سازی پر کتاب کی ڈاؤن لوڈ
+  function isBackground(url){
+    const pg = activePage();
+    if(/\.pdf(\?|$)/i.test(url)) return pg !== 'page-pdfmulti';
+    if(/\/api\/(book-causes|disease-synonyms|notify-disease)/.test(url)) return pg === 'page-home';
+    return false;
+  }
   // سائٹ کی ہر AI درخواست اور کتاب کی ڈاؤن لوڈ خود بخود اس پٹی میں
   const origFetch = window.fetch ? window.fetch.bind(window) : null;
   if(origFetch){
     window.fetch = function(input, init){
       const url = typeof input === 'string' ? input : (input && input.url) || '';
       const hit = LABELS.find(([re])=> re.test(url));
-      if(!hit) return origFetch(input, init);
+      if(!hit || isBackground(url)) return origFetch(input, init);
       const id = window.herbalBusyStart(hit[1]);
       const p = origFetch(input, init);
-      // جواب کا پورا متن آنے تک کام جاری سمجھیں
       return p.then(res=>{
+        // کتاب (PDF) کے ٹکڑے: جواب ملتے ہی کام ختم سمجھیں (پورا جسم پڑھنے کا انتظار نہیں — ورنہ پٹی گھومتی رہتی تھی)
+        if(/\.pdf(\?|$)/i.test(url)){ window.herbalBusyEnd(id); return res; }
         try{
           const clone = res.clone();
           clone.arrayBuffer().then(()=> window.herbalBusyEnd(id), ()=> window.herbalBusyEnd(id));
@@ -953,11 +963,8 @@ function homeRiskInfo(text, diseases, childInfo, ageGroup, ageGiven){
   return { risk: reasons.length > 0, reasons };
 }
 // علاج کے آخر میں لازمی وضاحت — ویب سائٹ ڈاکٹر/حکیم نہیں
-const HERBAL_DISCLAIMER_HTML = `<div class="result-card" style="margin-top:18px; border:1px solid #e0a050; background:rgba(224,160,80,0.07);">
-  <h3 style="color:#e0a050; margin-bottom:6px;">📢 ضروری وضاحت</h3>
-  <p style="color:var(--text); font-size:.93rem; margin:0 0 6px;">یہ ایک ویب سائٹ ہے — کوئی ڈاکٹر یا حکیم نہیں۔ یہاں دی گئی تمام معلومات، نسخے اور غذائیں صرف معلومات کے لیے ہیں۔</p>
-  <p style="color:var(--text); font-size:.93rem; margin:0 0 6px;">کوئی بھی نسخہ یا دوا استعمال کرنے سے پہلے کسی مستند ڈاکٹر یا حکیم سے مشورہ ضرور کریں۔</p>
-  <p style="color:var(--gold-soft); font-size:.9rem; margin:0;">ان نسخوں یا دواؤں کے استعمال سے کوئی مسئلہ یا نقصان ہو تو اس کی ذمہ داری ویب سائٹ پر نہیں ہوگی — استعمال کرنے والا خود ذمہ دار ہوگا۔</p>
+const HERBAL_DISCLAIMER_HTML = `<div style="margin-top:16px; border:1px solid #e0a050; border-radius:10px; padding:8px 12px; background:rgba(224,160,80,0.07);">
+  <p style="color:var(--text); font-size:.82rem; margin:0;"><b style="color:#e0a050;">📢 نوٹ:</b> یہ ویب سائٹ ہے، ڈاکٹر یا حکیم نہیں — معلومات کے لیے ہے۔ استعمال سے پہلے معالج سے مشورہ کریں؛ کسی نقصان کی ذمہ داری ویب سائٹ پر نہیں۔</p>
 </div>`;
 function homeDoctorHtml(reasons){
   return `<div style="border:2px solid #e0524f; border-radius:10px; padding:14px; background:rgba(224,82,79,0.08);">
@@ -3885,8 +3892,9 @@ async function herbalGetDocForCauses(fe){
   return doc;
 }
 async function herbalRenderBookPageImage(fe, pageNum, width){
-  const bz = window.herbalBusyStart ? window.herbalBusyStart('کتاب کا صفحہ کھول کر پڑھنے کے لیے تیار کیا جا رہا ہے') : 0;
-  try{ return await herbalRenderBookPageImageRaw(fe, pageNum, width); }finally{ if(window.herbalBusyEnd) window.herbalBusyEnd(bz); }
+  const bgPage = (document.querySelector('.page-section.active') || {}).id;
+  const bz = (window.herbalBusyStart && bgPage === 'page-pdfmulti') ? window.herbalBusyStart('کتاب کا صفحہ کھول کر پڑھنے کے لیے تیار کیا جا رہا ہے') : 0;
+  try{ return await herbalRenderBookPageImageRaw(fe, pageNum, width); }finally{ if(bz && window.herbalBusyEnd) window.herbalBusyEnd(bz); }
 }
 async function herbalRenderBookPageImageRaw(fe, pageNum, width){
   const doc = await herbalGetDocForCauses(fe);
