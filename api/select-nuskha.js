@@ -108,7 +108,7 @@ export default async function handler(req, res) {
    - "sabzi": سبزی / سالن — گھر میں پکنے والے عام پاکستانی سالن اور سبزیاں (مثلاً کدو، ٹینڈے، توری، پالک، میتھی، شلجم، گاجر، دال مونگ/مسور، لوکی)۔
    - "fruit": فروٹ — صرف اصل پھل (مثلاً امرود، سیب، کیلا، پپیتا، مالٹا/کینو، انار، انگور، ناشپاتی، آم، خربوزہ) — مصالحے یا جڑی بوٹیاں (اجوائن، ادرک، سونف، زیرہ، لہسن وغیرہ) ہرگز فروٹ میں نہ لکھیں۔
    ہر چیز صرف اپنے صحیح حصے میں: دودھ/دہی/انڈا/کھجور/شہد/میوہ "vitamins" میں، سبزی/دال/سالن "sabzi" میں، پھل "fruit" میں۔ نایاب یا مہنگی چیز (مثلاً اونٹنی کا دودھ) نہ لکھیں۔
-   شرائط: ہر حصے میں 2 سے 4 چیزیں؛ صرف عام، سستی، پاکستان/ایشیا کے گھروں میں ملنے والی چیزیں؛ موجودہ موسم (${seasonText}) میں ملنے والی موسمی چیزیں؛ مریض کے مزاج کے موافق — "دستیاب غذاؤں کی فہرست" میں موجود چیزوں کو ترجیح دیں؛ اور ہر ایک کا اسی بیماری کے لیے حقیقی فائدہ ہو۔ ہر چیز کے ساتھ "reason" میں ایک مختصر جملہ کہ یہ اس بیماری میں کیسے مدد کرتی ہے۔ بچے کے لیے نرم اور ہلکی غذائیں۔
+   شرائط: ہر حصے میں صرف 2 سے 3 سب سے اہم چیزیں؛ کوئی چیز دو حصوں میں نہ دہرائیں؛ "reason" زیادہ سے زیادہ 6 الفاظ؛ صرف عام، سستی، پاکستان/ایشیا کے گھروں میں ملنے والی چیزیں؛ موجودہ موسم (${seasonText}) میں ملنے والی موسمی چیزیں؛ مریض کے مزاج کے موافق — "دستیاب غذاؤں کی فہرست" میں موجود چیزوں کو ترجیح دیں؛ اور ہر ایک کا اسی بیماری کے لیے حقیقی فائدہ ہو۔ ہر چیز کے ساتھ "reason" میں ایک مختصر جملہ کہ یہ اس بیماری میں کیسے مدد کرتی ہے۔ بچے کے لیے نرم اور ہلکی غذائیں۔
 
 جواب صرف اس JSON شکل میں دیں، کوئی اضافی متن نہیں:
 {"selections":[{"name":"دوا کا صحیح نام (فہرست سے بالکل ویسا)","reason":"مختصر وجہ اردو میں، جس میں دوا کے فوائد سے وہ عین لفظ/فقرہ شامل ہو جو مریض کی بیماری/علامت سے میل کھاتا ہے"}],"foodSelections":[{"name":"غذا کا نام (فہرست سے بالکل ویسا)","reason":"مختصر وجہ اردو میں"}],"deficiencies":[{"category":"قسم کا اردو نام (مثلاً وٹامنز، معدنیات وغیرہ)","reason":"مختصر وجہ اردو میں، بیان کردہ علامت کا حوالہ دیتے ہوئے"}],"deficiencyFoodSelections":[{"name":"غذا کا نام (فہرست سے بالکل ویسا)","category":"کس کمی کے لیے ہے","reason":"مختصر وجہ اردو میں"}],"deficiencyQuestions":[{"question":"مختصر سوال اردو میں"}],"highRisk":false,"highRiskReason":"","dietPlan":{"vitamins":[{"name":"...","reason":"..."}],"sabzi":[{"name":"...","reason":"..."}],"fruit":[{"name":"...","reason":"..."}]}}`;
@@ -197,7 +197,7 @@ ${foodList.length ? foodList.join('، ') : '(کوئی غذائی فہرست فر
     const deficiencyFoodSelections = Array.isArray(parsed.deficiencyFoodSelections) ? parsed.deficiencyFoodSelections : [];
     const deficiencyQuestions = Array.isArray(parsed.deficiencyQuestions) ? parsed.deficiencyQuestions : [];
 
-    const cleanList = v => (Array.isArray(v) ? v : []).map(x => (typeof x === 'string' ? { name: x, reason: '' } : { name: String((x && x.name) || '').trim().slice(0, 50), reason: String((x && x.reason) || '').trim().slice(0, 160) })).filter(x => x.name).slice(0, 4);
+    const cleanList = v => (Array.isArray(v) ? v : []).map(x => (typeof x === 'string' ? { name: x, reason: '' } : { name: String((x && x.name) || '').trim().slice(0, 50), reason: String((x && x.reason) || '').trim().slice(0, 160) })).filter(x => x.name).slice(0, 3);
     const dp = parsed.dietPlan || {};
     const dietPlan = { vitamins: cleanList(dp.vitamins), sabzi: cleanList(dp.sabzi), fruit: cleanList(dp.fruit) };
     const highRiskReason = String(parsed.highRiskReason || '').trim().slice(0, 200);
