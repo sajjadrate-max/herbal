@@ -360,7 +360,7 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
 
   <div id="itemInfoBox" style="background:var(--card); border:1px solid var(--gold); border-radius:12px; padding:14px; margin:16px 0;">
     <h3 style="color:var(--gold); text-align:center; margin:0 0 6px;">🔎 نسخہ / دوا کی مکمل تفصیل</h3>
-    <p style="color:var(--muted); font-size:.82rem; text-align:center; margin:0 0 10px;">کوئی بھی جڑی بوٹی، کشتہ یا مرکب نسخہ لکھیں — مزاج، درجہ، خوراک، فوائد، اجزاء اور طریقہ سب کتابوں (PDF) سے پڑھ کر بتایا جائے گا۔</p>
+    <p style="color:var(--muted); font-size:.82rem; text-align:center; margin:0 0 10px;">کوئی بھی جڑی بوٹی، کشتہ، مرکب دوا (مثلاً اعصابی کھار) یا پورا نسخہ لکھیں — مزاج، درجہ، خوراک، فوائد، اجزاء اور طریقہ سب کتابوں (PDF) سے پڑھ کر بتایا جائے گا، اور کتاب کا وہی صفحہ بھی کھل سکے گا۔</p>
     <div style="display:flex; gap:8px; align-items:center;">
       <input class="search" id="itemInfoInput" placeholder="مثلاً: کشتہ فولاد، اسگندھ، حب جواہر..." onkeydown="if(event.key==='Enter'){event.preventDefault(); herbalItemInfo();}" style="flex:1; margin:0;">
       <button class="btn" onclick="herbalItemInfo()" style="border-radius:20px; padding:10px 16px; white-space:nowrap;">تفصیل دیکھیں</button>
@@ -368,6 +368,8 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
     <div id="itemInfoResult" style="margin-top:10px;"></div>
   </div>
 
+  <!-- پرانا "کھولیں" اور "منتخب بوٹیوں سے نسخہ" والا حصہ — اب اوپر والا ایک ہی خانہ سب کام کرتا ہے (چھپا دیا گیا) -->
+  <div id="oldHerbTools" style="display:none;">
   <div class="note">کسی جڑی بوٹی یا کشتے کا نام لکھیں (مثلاً: اجوائن دیسی، ہلدی، کشتہ فولاد) — کتاب کا وہی صفحہ کھل کر مکمل تفصیل سامنے آ جائے گی۔</div>
 
   <div style="display:flex; gap:8px; align-items:center;">
@@ -379,6 +381,7 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
 
   <button class="btn" style="margin-top:16px;" onclick="buildNuskha()">منتخب بوٹیوں سے نسخہ بنائیں</button>
   <div id="nuskhaResult" style="margin-top:20px;"></div>
+  </div>
 
   <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; padding:12px; margin:30px 0 16px;">
     <h4 style="color:var(--gold-soft); margin-bottom:8px; text-align:center; font-size:.95rem;">📚 دستیاب کتابیں (فی الحال تلاش میں شامل)</h4>
@@ -3973,6 +3976,7 @@ function herbalItemResultHtml(name, d, sources){
     ${d.ingredients.length ? `<div style="margin:4px 0;"><b style="color:var(--gold);">اجزاء:</b> ${d.ingredients.map(x=> escapeHtmlSearch(x.name) + (x.amount ? ' (' + escapeHtmlSearch(x.amount) + ')' : '')).join('، ')}</div>` : ''}
     ${row('ترکیب تیاری', d.method)}${row('طریقہ استعمال', d.usage)}${row('احتیاط / نقصان', d.cautions)}${row('مزید', d.other)}
     <div style="margin-top:8px; color:var(--muted); font-size:.78rem;">ماخذ (ٹیپ کریں تو وہی صفحہ کھلے گا): ${srcHtml}</div>
+    ${src[0] ? `<div style="text-align:center; margin-top:10px;"><button class="btn" onclick="herbalItemOpen('${src[0].lib}', '${escapeJsAttr(src[0].fileName)}', ${src[0].pageNum})" style="border-radius:20px; padding:8px 18px;">📖 کتاب کا صفحہ کھولیں</button></div>` : ''}
   </div>`;
 }
 // ---- مدد گار: وقت کی حد اور سرور کی صاف خرابی ----
