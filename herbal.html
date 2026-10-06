@@ -1231,13 +1231,13 @@ fieldOptionLabels['sugar'] = sugarChoices;
 // ---------- DISEASES (grouped by primary mizaj they point toward) ----------
 const diseaseList = [
   // ===== سر (28) =====
-  {name:"اعصابی سردرد", mizaj:"asabi", tendency:1, organ:"سر"},
+  {name:"سردرد", mizaj:"asabi", tendency:1, organ:"سر"},
   {name:"ٹھنڈا سر درد", mizaj:"asabi", tendency:1, organ:"سر"},
   {name:"سرسام", mizaj:"asabi", tendency:1, organ:"سر"},
   {name:"نسیان", mizaj:"asabi", tendency:1, organ:"سر"},
   {name:"محرقہ دماغی", mizaj:"asabi", tendency:1, organ:"سر"},
   {name:"کابوس", mizaj:"asabi", tendency:1, organ:"سر"},
-  {name:"عضلاتی سردرد", mizaj:"adalati", tendency:2, organ:"سر"},
+  
   {name:"گیس سے سردرد", mizaj:"adalati", tendency:2, organ:"سر"},
   {name:"دماغی کمزوری کا سردرد", mizaj:"adalati", tendency:2, organ:"سر"},
   {name:"ذہنی سردرد", mizaj:"adalati", tendency:2, organ:"سر"},
@@ -1246,18 +1246,18 @@ const diseaseList = [
   {name:"ہسٹیریا", mizaj:"adalati", tendency:2, organ:"سر"},
   {name:"مرگی", mizaj:"adalati", tendency:2, organ:"سر"},
   {name:"عام سردرد", mizaj:"adalati", tendency:3, organ:"سر"},
-  {name:"بےخوابی", mizaj:"adalati", tendency:3, organ:"سر"},
+  
   {name:"دائمی سردرد", mizaj:"adalati", tendency:3, organ:"سر"},
   {name:"درد شقیقہ دائیں طرف", mizaj:"adalati", tendency:3, organ:"سر"},
   {name:"انسومنیا", mizaj:"adalati", tendency:3, organ:"سر"},
   {name:"سردرد شقیقہ بائیں طرف", mizaj:"ghudi", tendency:4, organ:"سر"},
-  {name:"سرسام", mizaj:"ghudi", tendency:4, organ:"سر"},
+  
   {name:"جنون", mizaj:"ghudi", tendency:4, organ:"سر"},
-  {name:"مرگی", mizaj:"ghudi", tendency:4, organ:"سر"},
-  {name:"سرسام", mizaj:"ghudi", tendency:5, organ:"سر"},
-  {name:"سردرد", mizaj:"asabi", tendency:6, organ:"سر"},
+  
+  
+  
   {name:"کتے کاٹنے کا جنون", mizaj:"asabi", tendency:6, organ:"سر"},
-  {name:"مرگی", mizaj:"asabi", tendency:6, organ:"سر"},
+  
   {name:"بھول جانا", mizaj:"asabi", tendency:6, organ:"سر"},
 
   // ===== آنکھ (18) =====
@@ -1277,22 +1277,22 @@ const diseaseList = [
   {name:"آنکھوں میں زخم و ورم", mizaj:"ghudi", tendency:4, organ:"آنکھ"},
   {name:"آنکھوں سے پانی آنا", mizaj:"ghudi", tendency:5, organ:"آنکھ"},
   {name:"آنکھ کی سیاہ پتلی کا پھیلنا", mizaj:"ghudi", tendency:5, organ:"آنکھ"},
-  {name:"آنکھوں کی جھلی میں سوزش", mizaj:"asabi", tendency:6, organ:"آنکھ"},
-  {name:"آنکھوں سے پانی آنا", mizaj:"asabi", tendency:6, organ:"آنکھ"},
+  
+  
 
   // ===== کان (17) =====
   {name:"کان کا درد", mizaj:"asabi", tendency:1, organ:"کان"},
   {name:"کان بہنا", mizaj:"asabi", tendency:1, organ:"کان"},
-  {name:"کان کا درد", mizaj:"adalati", tendency:2, organ:"کان"},
+  
   {name:"کان کا بجنا", mizaj:"adalati", tendency:2, organ:"کان"},
   {name:"کان کی خشکی", mizaj:"adalati", tendency:2, organ:"کان"},
   {name:"رعشہ", mizaj:"adalati", tendency:2, organ:"کان"},
-  {name:"کان کا درد", mizaj:"adalati", tendency:3, organ:"کان"},
+  
   {name:"کان سے خون بہنا", mizaj:"adalati", tendency:3, organ:"کان"},
   {name:"کان میں شائیں شائیں", mizaj:"adalati", tendency:3, organ:"کان"},
   {name:"کان میں زخم", mizaj:"ghudi", tendency:4, organ:"کان"},
   {name:"کان کا السر", mizaj:"ghudi", tendency:4, organ:"کان"},
-  {name:"کان بہنا", mizaj:"ghudi", tendency:4, organ:"کان"},
+  
   {name:"کان کی سوزش", mizaj:"ghudi", tendency:4, organ:"کان"},
   {name:"کانچ نکلنا", mizaj:"ghudi", tendency:4, organ:"کان"},
   {name:"کانچ کا نکلنا", mizaj:"ghudi", tendency:5, organ:"کان"},
@@ -1307,15 +1307,15 @@ const diseaseList = [
   {name:"ناک کی خشکی", mizaj:"adalati", tendency:2, organ:"ناک"},
   {name:"نکسیر", mizaj:"adalati", tendency:2, organ:"ناک"},
   {name:"نکسیر آنا", mizaj:"adalati", tendency:3, organ:"ناک"},
-  {name:"بند نزلہ", mizaj:"adalati", tendency:3, organ:"ناک"},
-  {name:"نکسیر", mizaj:"ghudi", tendency:4, organ:"ناک"},
+  
+  
   {name:"نزلہ", mizaj:"ghudi", tendency:4, organ:"ناک"},
   {name:"ناک میں زخم و خون", mizaj:"ghudi", tendency:4, organ:"ناک"},
-  {name:"نکسیر", mizaj:"ghudi", tendency:4, organ:"ناک"},
-  {name:"نزلہ", mizaj:"ghudi", tendency:5, organ:"ناک"},
+  
+  
   {name:"ناک سے گرم رطوبت گرنا", mizaj:"asabi", tendency:6, organ:"ناک"},
   {name:"سونگھنے کی قوت کم ہونا", mizaj:"asabi", tendency:6, organ:"ناک"},
-  {name:"نزلہ", mizaj:"asabi", tendency:6, organ:"ناک"},
+  
 
   // ===== ہونٹ (12) =====
   {name:"ہونٹوں کا بڑا اور موٹا ہونا", mizaj:"asabi", tendency:1, organ:"ہونٹ"},
@@ -1323,12 +1323,12 @@ const diseaseList = [
   {name:"ہونٹوں کا پھٹنا", mizaj:"adalati", tendency:2, organ:"ہونٹ"},
   {name:"ہونٹ سے خون نکلنا", mizaj:"adalati", tendency:2, organ:"ہونٹ"},
   {name:"ہونٹوں کا ورم", mizaj:"adalati", tendency:2, organ:"ہونٹ"},
-  {name:"ہونٹوں کا ورم", mizaj:"adalati", tendency:3, organ:"ہونٹ"},
+  
   {name:"ہونٹ کی خشکی", mizaj:"adalati", tendency:3, organ:"ہونٹ"},
   {name:"ہونٹوں پر صفراوی چھالے", mizaj:"ghudi", tendency:4, organ:"ہونٹ"},
   {name:"ضعفِ قلب", mizaj:"ghudi", tendency:4, organ:"ہونٹ"},
-  {name:"ضعفِ قلب", mizaj:"ghudi", tendency:5, organ:"ہونٹ"},
-  {name:"ضعفِ قلب", mizaj:"asabi", tendency:6, organ:"ہونٹ"},
+  
+  
   {name:"عظیمِ قلب", mizaj:"asabi", tendency:6, organ:"ہونٹ"},
 
   // ===== منہ و زبان (20) =====
@@ -1337,17 +1337,17 @@ const diseaseList = [
   {name:"زبان پر چھالے", mizaj:"asabi", tendency:1, organ:"منہ و زبان"},
   {name:"لکنت", mizaj:"asabi", tendency:1, organ:"منہ و زبان"},
   {name:"زبان کا ذائقہ محسوس نہ ہونا", mizaj:"asabi", tendency:1, organ:"منہ و زبان"},
-  {name:"منہ میں چھالے", mizaj:"adalati", tendency:2, organ:"منہ و زبان"},
+  
   {name:"زبان کی جلن", mizaj:"adalati", tendency:2, organ:"منہ و زبان"},
   {name:"زبان کا سوجن", mizaj:"adalati", tendency:2, organ:"منہ و زبان"},
   {name:"زبان کا کھردرا پن", mizaj:"adalati", tendency:2, organ:"منہ و زبان"},
   {name:"منہ سے بدبو", mizaj:"adalati", tendency:2, organ:"منہ و زبان"},
-  {name:"لکنت", mizaj:"adalati", tendency:2, organ:"منہ و زبان"},
+  
   {name:"زبان کا سکڑنا", mizaj:"adalati", tendency:3, organ:"منہ و زبان"},
   {name:"زبان کی خشکی", mizaj:"adalati", tendency:3, organ:"منہ و زبان"},
   {name:"زبان کا کینسر", mizaj:"adalati", tendency:3, organ:"منہ و زبان"},
-  {name:"منہ میں چھالے", mizaj:"ghudi", tendency:4, organ:"منہ و زبان"},
-  {name:"منہ میں چھالے", mizaj:"ghudi", tendency:5, organ:"منہ و زبان"},
+  
+  
   {name:"زبان کی لکنت", mizaj:"ghudi", tendency:5, organ:"منہ و زبان"},
   {name:"منہ سے گندی بدبو", mizaj:"asabi", tendency:6, organ:"منہ و زبان"},
   {name:"زبان کا پھولنا", mizaj:"asabi", tendency:6, organ:"منہ و زبان"},
@@ -1371,9 +1371,9 @@ const diseaseList = [
   {name:"گلے میں کیرا گرنا", mizaj:"asabi", tendency:1, organ:"گلا"},
   {name:"حلق کی سوزش", mizaj:"asabi", tendency:1, organ:"گلا"},
   {name:"گلے کی سوزش", mizaj:"adalati", tendency:2, organ:"گلا"},
-  {name:"گلے کی سوزش", mizaj:"adalati", tendency:2, organ:"گلا"},
+  
   {name:"آواز کا بیٹھنا", mizaj:"adalati", tendency:3, organ:"گلا"},
-  {name:"گلے کی سوزش", mizaj:"adalati", tendency:3, organ:"گلا"},
+  
   {name:"گلے کی جھلی کی سوزش", mizaj:"ghudi", tendency:4, organ:"گلا"},
   {name:"سوزشِ مری", mizaj:"ghudi", tendency:5, organ:"گلا"},
 
@@ -1391,25 +1391,25 @@ const diseaseList = [
   {name:"عضوِ تناسل کا ڈھیلا ہونا", mizaj:"adalati", tendency:2, organ:"پھیپھڑے و دمہ"},
   {name:"سینہ کی خشکی", mizaj:"adalati", tendency:3, organ:"پھیپھڑے و دمہ"},
   {name:"خشک کھانسی", mizaj:"adalati", tendency:3, organ:"پھیپھڑے و دمہ"},
-  {name:"دمہ", mizaj:"adalati", tendency:3, organ:"پھیپھڑے و دمہ"},
+  
   {name:"پھیپھڑوں سے خون آنا", mizaj:"adalati", tendency:3, organ:"پھیپھڑے و دمہ"},
   {name:"عضوِ تناسل کا ورم", mizaj:"adalati", tendency:3, organ:"پھیپھڑے و دمہ"},
   {name:"واریکوسل", mizaj:"adalati", tendency:3, organ:"پھیپھڑے و دمہ"},
-  {name:"دمہ", mizaj:"ghudi", tendency:4, organ:"پھیپھڑے و دمہ"},
-  {name:"کھانسی", mizaj:"ghudi", tendency:4, organ:"پھیپھڑے و دمہ"},
-  {name:"پھیپھڑوں کا ورم", mizaj:"ghudi", tendency:4, organ:"پھیپھڑے و دمہ"},
+  
+  
+  
   {name:"پھیپھڑوں میں پیپ", mizaj:"ghudi", tendency:4, organ:"پھیپھڑے و دمہ"},
   {name:"پھیپھڑوں میں زخم", mizaj:"ghudi", tendency:4, organ:"پھیپھڑے و دمہ"},
   {name:"کھانسی سے خون بہنا", mizaj:"ghudi", tendency:4, organ:"پھیپھڑے و دمہ"},
   {name:"سل", mizaj:"ghudi", tendency:4, organ:"پھیپھڑے و دمہ"},
-  {name:"کھانسی", mizaj:"ghudi", tendency:5, organ:"پھیپھڑے و دمہ"},
+  
   {name:"سینہ میں شدید جلن والی کھانسی", mizaj:"ghudi", tendency:5, organ:"پھیپھڑے و دمہ"},
-  {name:"غدی دمہ", mizaj:"ghudi", tendency:5, organ:"پھیپھڑے و دمہ"},
+  
   {name:"پھیپھڑے کی بائیں طرف درد", mizaj:"ghudi", tendency:5, organ:"پھیپھڑے و دمہ"},
   {name:"پھیپھڑوں کا لٹک جانا", mizaj:"asabi", tendency:6, organ:"پھیپھڑے و دمہ"},
   {name:"سینہ کی گھٹن", mizaj:"asabi", tendency:6, organ:"پھیپھڑے و دمہ"},
   {name:"جلن دار کھانسی", mizaj:"asabi", tendency:6, organ:"پھیپھڑے و دمہ"},
-  {name:"عضوِ تناسل کا ڈھیلا ہونا", mizaj:"asabi", tendency:6, organ:"پھیپھڑے و دمہ"},
+  
 
   // ===== دل (13) =====
   {name:"دل کا بڑا ہونا", mizaj:"asabi", tendency:1, organ:"دل"},
@@ -1421,9 +1421,9 @@ const diseaseList = [
   {name:"دل کا سوراخ", mizaj:"adalati", tendency:3, organ:"دل"},
   {name:"دل کی سوزش", mizaj:"ghudi", tendency:4, organ:"دل"},
   {name:"دل کا پھیل جانا", mizaj:"ghudi", tendency:4, organ:"دل"},
-  {name:"دل کی گھبراہٹ", mizaj:"ghudi", tendency:4, organ:"دل"},
+  
   {name:"دل کا فیل ہونا", mizaj:"ghudi", tendency:4, organ:"دل"},
-  {name:"دل کا پھیل جانا", mizaj:"ghudi", tendency:5, organ:"دل"},
+  
   {name:"دل کا پھولنا", mizaj:"asabi", tendency:6, organ:"دل"},
 
   // ===== پستان (16) =====
@@ -1439,10 +1439,10 @@ const diseaseList = [
   {name:"ورمِ پستان دائیں طرف", mizaj:"adalati", tendency:3, organ:"پستان"},
   {name:"بریسٹ کینسر", mizaj:"ghudi", tendency:4, organ:"پستان"},
   {name:"پستان کی سوزش", mizaj:"ghudi", tendency:5, organ:"پستان"},
-  {name:"پستان کا سکڑنا", mizaj:"ghudi", tendency:5, organ:"پستان"},
+  
   {name:"پستان کا ورم بائیں طرف", mizaj:"ghudi", tendency:5, organ:"پستان"},
-  {name:"پستان بڑے ہونا", mizaj:"asabi", tendency:6, organ:"پستان"},
-  {name:"دودھ زیادہ آنا", mizaj:"asabi", tendency:6, organ:"پستان"},
+  
+  
 
   // ===== معدہ (28) =====
   {name:"معدہ میں گڑبڑ", mizaj:"asabi", tendency:1, organ:"معدہ"},
@@ -1459,20 +1459,20 @@ const diseaseList = [
   {name:"تبخیرِ معدہ", mizaj:"adalati", tendency:2, organ:"معدہ"},
   {name:"ترش ڈکار", mizaj:"adalati", tendency:2, organ:"معدہ"},
   {name:"ورمِ معدہ", mizaj:"adalati", tendency:3, organ:"معدہ"},
-  {name:"معدے کا درد", mizaj:"adalati", tendency:3, organ:"معدہ"},
+  
   {name:"معدہ کی جلن", mizaj:"adalati", tendency:3, organ:"معدہ"},
   {name:"معدے کا السر", mizaj:"adalati", tendency:3, organ:"معدہ"},
   {name:"معدے کا کینسر", mizaj:"adalati", tendency:3, organ:"معدہ"},
-  {name:"ہچکی", mizaj:"adalati", tendency:3, organ:"معدہ"},
+  
   {name:"بھوک شدید لگنا", mizaj:"adalati", tendency:3, organ:"معدہ"},
   {name:"قے صفراوی", mizaj:"ghudi", tendency:4, organ:"معدہ"},
-  {name:"جلنِ معدہ", mizaj:"ghudi", tendency:4, organ:"معدہ"},
+  
   {name:"ضعفِ معدہ", mizaj:"ghudi", tendency:4, organ:"معدہ"},
   {name:"معدے کی خرابی", mizaj:"ghudi", tendency:4, organ:"معدہ"},
   {name:"صفراوی قے", mizaj:"ghudi", tendency:5, organ:"معدہ"},
   {name:"ہر وقت بھوک کی خواہش", mizaj:"ghudi", tendency:5, organ:"معدہ"},
   {name:"بھوک کا بند ہونا", mizaj:"asabi", tendency:6, organ:"معدہ"},
-  {name:"ہیضہ", mizaj:"asabi", tendency:6, organ:"معدہ"},
+  
 
   // ===== آنتیں و مقعد (30) =====
   {name:"دست", mizaj:"asabi", tendency:1, organ:"آنتیں و مقعد"},
@@ -1491,11 +1491,11 @@ const diseaseList = [
   {name:"بڑی آنت کا السر", mizaj:"adalati", tendency:3, organ:"آنتیں و مقعد"},
   {name:"خونی بواسیر", mizaj:"adalati", tendency:3, organ:"آنتیں و مقعد"},
   {name:"مقعد کا کینسر", mizaj:"adalati", tendency:3, organ:"آنتیں و مقعد"},
-  {name:"بھگندر", mizaj:"adalati", tendency:3, organ:"آنتیں و مقعد"},
+  
   {name:"ہرنیا", mizaj:"adalati", tendency:3, organ:"آنتیں و مقعد"},
   {name:"آنتوں میں مروڑ", mizaj:"ghudi", tendency:4, organ:"آنتیں و مقعد"},
   {name:"پیچش", mizaj:"ghudi", tendency:4, organ:"آنتیں و مقعد"},
-  {name:"ناسورِ مقعد", mizaj:"ghudi", tendency:4, organ:"آنتیں و مقعد"},
+  
   {name:"بھگندرِ مقعد", mizaj:"ghudi", tendency:4, organ:"آنتیں و مقعد"},
   {name:"بڑی آنت کا کینسر", mizaj:"ghudi", tendency:4, organ:"آنتیں و مقعد"},
   {name:"خونی پیچش", mizaj:"ghudi", tendency:4, organ:"آنتیں و مقعد"},
@@ -1510,12 +1510,12 @@ const diseaseList = [
   {name:"جگر کا بڑھنا", mizaj:"asabi", tendency:1, organ:"جگر و تلی"},
   {name:"تلی کا بڑھنا", mizaj:"asabi", tendency:1, organ:"جگر و تلی"},
   {name:"ضعفِ جگر", mizaj:"asabi", tendency:1, organ:"جگر و تلی"},
-  {name:"جگر کا بڑھنا", mizaj:"adalati", tendency:2, organ:"جگر و تلی"},
-  {name:"تلی کا بڑھنا", mizaj:"adalati", tendency:2, organ:"جگر و تلی"},
+  
+  
   {name:"کالا یرقان", mizaj:"adalati", tendency:2, organ:"جگر و تلی"},
   {name:"ہیپاٹائٹس سی", mizaj:"adalati", tendency:2, organ:"جگر و تلی"},
   {name:"فیٹی لیور", mizaj:"adalati", tendency:2, organ:"جگر و تلی"},
-  {name:"جگر کا بڑھنا", mizaj:"adalati", tendency:3, organ:"جگر و تلی"},
+  
   {name:"صفرا کی کمی", mizaj:"adalati", tendency:3, organ:"جگر و تلی"},
   {name:"اختلاجِ جگر", mizaj:"adalati", tendency:3, organ:"جگر و تلی"},
   {name:"جگر کی سوزش", mizaj:"ghudi", tendency:4, organ:"جگر و تلی"},
@@ -1523,12 +1523,12 @@ const diseaseList = [
   {name:"جگر میں پانی بھرنا", mizaj:"ghudi", tendency:4, organ:"جگر و تلی"},
   {name:"خارشِ صفراوی", mizaj:"ghudi", tendency:4, organ:"جگر و تلی"},
   {name:"ہیپاٹائٹس بی", mizaj:"ghudi", tendency:4, organ:"جگر و تلی"},
-  {name:"جگر کی سوزش", mizaj:"ghudi", tendency:5, organ:"جگر و تلی"},
+  
   {name:"جگر کا درد", mizaj:"ghudi", tendency:5, organ:"جگر و تلی"},
   {name:"جگر کا ورم", mizaj:"ghudi", tendency:5, organ:"جگر و تلی"},
   {name:"چھپاکی صفراوی", mizaj:"ghudi", tendency:5, organ:"جگر و تلی"},
   {name:"ورمِ جگر کا بخار", mizaj:"ghudi", tendency:5, organ:"جگر و تلی"},
-  {name:"ضعفِ جگر", mizaj:"asabi", tendency:6, organ:"جگر و تلی"},
+  
   {name:"عظمِ طحال", mizaj:"asabi", tendency:6, organ:"جگر و تلی"},
   {name:"ہیپاٹائٹس اے", mizaj:"asabi", tendency:6, organ:"جگر و تلی"},
 
@@ -1551,11 +1551,11 @@ const diseaseList = [
   {name:"پیشاب جل کر آنا", mizaj:"ghudi", tendency:5, organ:"گردہ و مثانہ"},
   {name:"پیشاب میں پتھری", mizaj:"ghudi", tendency:5, organ:"گردہ و مثانہ"},
   {name:"بائیں گردے میں درد", mizaj:"ghudi", tendency:5, organ:"گردہ و مثانہ"},
-  {name:"مثانہ میں جلن", mizaj:"ghudi", tendency:5, organ:"گردہ و مثانہ"},
+  
   {name:"رات کو بستر پر پیشاب", mizaj:"asabi", tendency:6, organ:"گردہ و مثانہ"},
-  {name:"ضعفِ گردہ", mizaj:"asabi", tendency:6, organ:"گردہ و مثانہ"},
-  {name:"گردے کی پتھری", mizaj:"asabi", tendency:6, organ:"گردہ و مثانہ"},
-  {name:"بار بار پیشاب آنا", mizaj:"asabi", tendency:6, organ:"گردہ و مثانہ"},
+  
+  
+  
 
   // ===== خصیہ و عضوِ تناسل (23) =====
   {name:"ضعفِ خصیہ", mizaj:"asabi", tendency:1, organ:"خصیہ و عضوِ تناسل"},
@@ -1576,21 +1576,21 @@ const diseaseList = [
   {name:"سرعتِ انزال", mizaj:"ghudi", tendency:4, organ:"خصیہ و عضوِ تناسل"},
   {name:"انتشار کے ساتھ امساک کی کمی", mizaj:"ghudi", tendency:4, organ:"خصیہ و عضوِ تناسل"},
   {name:"بائیں خصیہ میں درد", mizaj:"ghudi", tendency:5, organ:"خصیہ و عضوِ تناسل"},
-  {name:"سرعتِ انزال", mizaj:"ghudi", tendency:5, organ:"خصیہ و عضوِ تناسل"},
+  
   {name:"ضعفِ باہ کبدی", mizaj:"ghudi", tendency:5, organ:"خصیہ و عضوِ تناسل"},
   {name:"سوزاک", mizaj:"ghudi", tendency:5, organ:"خصیہ و عضوِ تناسل"},
   {name:"کجی قضیب بائیں طرف", mizaj:"ghudi", tendency:5, organ:"خصیہ و عضوِ تناسل"},
-  {name:"جریانِ منی", mizaj:"asabi", tendency:6, organ:"خصیہ و عضوِ تناسل"},
+  
 
   // ===== رحم و حیض (خواتین) (22) =====
   {name:"بندشِ حیض", mizaj:"asabi", tendency:1, organ:"رحم و حیض (خواتین)"},
   {name:"رحم کا ڈھیلا ہونا", mizaj:"asabi", tendency:1, organ:"رحم و حیض (خواتین)"},
-  {name:"لیکوریا اعصابی", mizaj:"asabi", tendency:1, organ:"رحم و حیض (خواتین)"},
+  {name:"لیکوریا", mizaj:"all", tendency:1, organ:"رحم و حیض (خواتین)"},
   {name:"رحم میں درد", mizaj:"adalati", tendency:2, organ:"رحم و حیض (خواتین)"},
   {name:"رحم و شرمگاہ کی خارش", mizaj:"adalati", tendency:2, organ:"رحم و حیض (خواتین)"},
   {name:"رحم کا سکڑنا", mizaj:"adalati", tendency:2, organ:"رحم و حیض (خواتین)"},
   {name:"زخمِ رحم", mizaj:"adalati", tendency:3, organ:"رحم و حیض (خواتین)"},
-  {name:"لیکوریا رحم", mizaj:"adalati", tendency:3, organ:"رحم و حیض (خواتین)"},
+  
   {name:"کثرتِ حیض", mizaj:"adalati", tendency:3, organ:"رحم و حیض (خواتین)"},
   {name:"ورمِ رحم", mizaj:"ghudi", tendency:4, organ:"رحم و حیض (خواتین)"},
   {name:"بچہ دانی کا باہر نکلنا", mizaj:"ghudi", tendency:4, organ:"رحم و حیض (خواتین)"},
@@ -1600,8 +1600,8 @@ const diseaseList = [
   {name:"خصیۃ الرحم کی سوزش", mizaj:"ghudi", tendency:5, organ:"رحم و حیض (خواتین)"},
   {name:"رحم باہر نکلنا", mizaj:"ghudi", tendency:5, organ:"رحم و حیض (خواتین)"},
   {name:"رحم کا درد", mizaj:"ghudi", tendency:5, organ:"رحم و حیض (خواتین)"},
-  {name:"لیکوریا میں جلن", mizaj:"ghudi", tendency:5, organ:"رحم و حیض (خواتین)"},
-  {name:"لیکوریا", mizaj:"asabi", tendency:6, organ:"رحم و حیض (خواتین)"},
+  
+  
   {name:"رحم کا دم گھٹنا", mizaj:"asabi", tendency:6, organ:"رحم و حیض (خواتین)"},
   {name:"رحم کا باہر نکلنا", mizaj:"asabi", tendency:6, organ:"رحم و حیض (خواتین)"},
   {name:"بندشِ خونِ حیض", mizaj:"asabi", tendency:6, organ:"رحم و حیض (خواتین)"},
@@ -1618,13 +1618,13 @@ const diseaseList = [
   {name:"پنڈلیوں میں درد", mizaj:"adalati", tendency:2, organ:"جوڑ، ہڈیاں و پٹھے"},
   {name:"مہرے میں درد", mizaj:"adalati", tendency:2, organ:"جوڑ، ہڈیاں و پٹھے"},
   {name:"گھٹنے کا درد", mizaj:"adalati", tendency:3, organ:"جوڑ، ہڈیاں و پٹھے"},
-  {name:"عرق النساء دائیں طرف", mizaj:"adalati", tendency:3, organ:"جوڑ، ہڈیاں و پٹھے"},
+  
   {name:"یورک ایسڈ", mizaj:"adalati", tendency:3, organ:"جوڑ، ہڈیاں و پٹھے"},
   {name:"جوڑوں کا درد و سوزش", mizaj:"ghudi", tendency:4, organ:"جوڑ، ہڈیاں و پٹھے"},
-  {name:"جوڑوں کا درد", mizaj:"ghudi", tendency:4, organ:"جوڑ، ہڈیاں و پٹھے"},
+  
   {name:"پٹھوں کا کھچاؤ", mizaj:"ghudi", tendency:4, organ:"جوڑ، ہڈیاں و پٹھے"},
-  {name:"جوڑوں کا درد", mizaj:"asabi", tendency:6, organ:"جوڑ، ہڈیاں و پٹھے"},
-  {name:"عرق النساء دائیں طرف", mizaj:"asabi", tendency:6, organ:"جوڑ، ہڈیاں و پٹھے"},
+  
+  
 
   // ===== جلد، بال و ناخن (30) =====
   {name:"چیچک", mizaj:"asabi", tendency:1, organ:"جلد، بال و ناخن"},
@@ -1649,14 +1649,14 @@ const diseaseList = [
   {name:"خارش ٹانگوں پر", mizaj:"adalati", tendency:3, organ:"جلد، بال و ناخن"},
   {name:"خارش تر", mizaj:"adalati", tendency:3, organ:"جلد، بال و ناخن"},
   {name:"جلد کا زور پڑنا", mizaj:"ghudi", tendency:4, organ:"جلد، بال و ناخن"},
-  {name:"گنجا پن", mizaj:"ghudi", tendency:4, organ:"جلد، بال و ناخن"},
-  {name:"خارش", mizaj:"ghudi", tendency:4, organ:"جلد، بال و ناخن"},
+  
+  
   {name:"دھدری", mizaj:"ghudi", tendency:4, organ:"جلد، بال و ناخن"},
   {name:"زرد رنگ کی پھنسیاں", mizaj:"ghudi", tendency:5, organ:"جلد، بال و ناخن"},
   {name:"جلد کی جلن دار پھنسیاں", mizaj:"ghudi", tendency:5, organ:"جلد، بال و ناخن"},
-  {name:"گنجا پن", mizaj:"asabi", tendency:6, organ:"جلد، بال و ناخن"},
-  {name:"خسرہ", mizaj:"asabi", tendency:6, organ:"جلد، بال و ناخن"},
-  {name:"دھدری", mizaj:"asabi", tendency:6, organ:"جلد، بال و ناخن"},
+  
+  
+  
 
   // ===== عمومی/پورے جسم کی بیماریاں (67) =====
   {name:"درد اعصابہ", mizaj:"asabi", tendency:1, organ:"عمومی/پورے جسم کی بیماریاں"},
@@ -1664,7 +1664,7 @@ const diseaseList = [
   {name:"سفید موتیا", mizaj:"asabi", tendency:1, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"نزدیک کی نظر کمزور", mizaj:"asabi", tendency:1, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"خون کی کمی", mizaj:"asabi", tendency:1, organ:"عمومی/پورے جسم کی بیماریاں"},
-  {name:"شوگر اعصابی", mizaj:"asabi", tendency:1, organ:"عمومی/پورے جسم کی بیماریاں"},
+  {name:"شوگر", mizaj:"asabi", tendency:1, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"بائیں طرف کا فالج", mizaj:"asabi", tendency:1, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"لیوکیمیا", mizaj:"asabi", tendency:1, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"حملِ ضائع ہونا", mizaj:"asabi", tendency:1, organ:"عمومی/پورے جسم کی بیماریاں"},
@@ -1697,9 +1697,9 @@ const diseaseList = [
   {name:"انفکشن", mizaj:"ghudi", tendency:4, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"یوریا بڑھنا", mizaj:"ghudi", tendency:4, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"کریٹینائن بڑھنا", mizaj:"ghudi", tendency:4, organ:"عمومی/پورے جسم کی بیماریاں"},
-  {name:"ٹائیفائیڈ", mizaj:"ghudi", tendency:4, organ:"عمومی/پورے جسم کی بیماریاں"},
+  
   {name:"السر", mizaj:"ghudi", tendency:4, organ:"عمومی/پورے جسم کی بیماریاں"},
-  {name:"خون کی کمی", mizaj:"ghudi", tendency:4, organ:"عمومی/پورے جسم کی بیماریاں"},
+  
   {name:"فالج بائیں طرف", mizaj:"ghudi", tendency:4, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"پھوڑے", mizaj:"ghudi", tendency:4, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"بلڈ پریشر ہائی", mizaj:"ghudi", tendency:4, organ:"عمومی/پورے جسم کی بیماریاں"},
@@ -1719,9 +1719,9 @@ const diseaseList = [
   {name:"اونچا سننا", mizaj:"asabi", tendency:6, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"پیاس", mizaj:"asabi", tendency:6, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"میٹھی بلغم آنا", mizaj:"asabi", tendency:6, organ:"عمومی/پورے جسم کی بیماریاں"},
-  {name:"ناف کا ٹلنا", mizaj:"asabi", tendency:6, organ:"عمومی/پورے جسم کی بیماریاں"},
-  {name:"شوگر", mizaj:"asabi", tendency:6, organ:"عمومی/پورے جسم کی بیماریاں"},
-  {name:"ٹائیفائیڈ", mizaj:"asabi", tendency:6, organ:"عمومی/پورے جسم کی بیماریاں"},
+  
+  
+  
   {name:"بلڈ پریشر لو", mizaj:"asabi", tendency:6, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"جسم کا پھول جانا", mizaj:"asabi", tendency:6, organ:"عمومی/پورے جسم کی بیماریاں"},
   {name:"فالج", mizaj:"asabi", tendency:6, organ:"عمومی/پورے جسم کی بیماریاں"},
@@ -1786,6 +1786,21 @@ function getIcon(name){
 }
 
 const allDiseases = diseaseList.map(d=> ({name:d.name, mizaj:d.mizaj, tendency:d.tendency, organ:d.organ, icon:getIcon(d.name)}));
+
+// ---------- بیماری کی قسم معلوم کرنے کے لیے اضافی سوالات (follow-up) ----------
+// کچھ بیماریاں ایک ہی مختصر نام سے لکھی جاتی ہیں، لیکن ان کی مزاج کے مطابق مختلف قسمیں ہو سکتی ہیں —
+// بجائے اس کے کہ ہر قسم کا الگ نام فہرست میں شامل ہو، یہاں سے ایک اضافی سوال پوچھ کر معلوم کیا جاتا ہے
+const diseaseFollowups = {
+  "لیکوریا": { question: "کیا لیکوریا کے ساتھ جلن (جلن کا احساس) بھی ہے؟", yesMizaj: "ghudi" }
+};
+window.diseaseFollowupAnswers = {};
+function answerDiseaseFollowup(diseaseName, did, isYes, btnEl){
+  window.diseaseFollowupAnswers[diseaseName] = isYes;
+  const wrap = document.getElementById(`followup-${did}`);
+  if(wrap) wrap.querySelectorAll('button').forEach(b=>{ b.style.borderColor=''; b.style.background=''; });
+  btnEl.style.borderColor = 'var(--gold)';
+  btnEl.style.background = 'rgba(212,175,55,0.15)';
+}
 
 const diseaseGrid = document.getElementById('diseaseGrid');
 diseaseGrid.className = '';
@@ -1854,6 +1869,17 @@ organOrderList.forEach((organKey, gi)=>{
     label.id = `wrap-${item.did}`;
     label.innerHTML = `<input type="checkbox" id="${item.did}" onchange="toggleSymptom('${item.did}', '${safeKey}')"><span>${item.icon} ${item.name}</span>`;
     panelGrid.appendChild(label);
+
+    const followup = diseaseFollowups[item.name];
+    if(followup){
+      const fu = document.createElement('div');
+      fu.id = `followup-${item.did}`;
+      fu.style.cssText = 'display:none; grid-column:1/-1; background:rgba(212,175,55,0.08); border:1px dashed var(--gold); border-radius:8px; padding:10px 14px; margin:-2px 0 4px;';
+      fu.innerHTML = `<p style="margin-bottom:8px; color:var(--gold-soft); font-size:.9rem;">${followup.question}</p>
+        <button type="button" class="btn secondary" style="padding:6px 16px; font-size:.85rem;" onclick="answerDiseaseFollowup('${item.name}', '${item.did}', true, this)">جی ہاں</button>
+        <button type="button" class="btn secondary" style="padding:6px 16px; font-size:.85rem; margin-right:8px;" onclick="answerDiseaseFollowup('${item.name}', '${item.did}', false, this)">نہیں</button>`;
+      panelGrid.appendChild(fu);
+    }
   });
   panel.appendChild(panelGrid);
   container.appendChild(panel);
@@ -1864,6 +1890,15 @@ organOrderList.forEach((organKey, gi)=>{
 function toggleSymptom(id, organKey){
   const checked = document.getElementById(id).checked;
   document.getElementById('wrap-'+id).classList.toggle('checked', checked);
+  const followupEl = document.getElementById(`followup-${id}`);
+  if(followupEl){
+    followupEl.style.display = checked ? 'block' : 'none';
+    if(!checked){
+      const item = diseaseIds.find(d=> d.id === id);
+      if(item) delete window.diseaseFollowupAnswers[item.name];
+      followupEl.querySelectorAll('button').forEach(b=>{ b.style.borderColor=''; b.style.background=''; });
+    }
+  }
   if(organKey) updateOrganSummary(organKey);
   if(checked) revealDiagnoseButton();
   onDiseaseSelectionChanged();
@@ -4756,7 +4791,12 @@ function computeMizaj(){
   diseaseIds.forEach(d=>{
     if(document.getElementById(d.id).checked){
       answered++;
-      if(d.mizaj !== 'all') totals[d.mizaj] += 1;
+      const followup = diseaseFollowups[d.name];
+      if(followup && window.diseaseFollowupAnswers[d.name] === true){
+        totals[followup.yesMizaj] += 1;
+      } else if(d.mizaj !== 'all'){
+        totals[d.mizaj] += 1;
+      }
     }
   });
 
@@ -4784,7 +4824,7 @@ function stripCombinationWarning(warning){
 }
 
 const tieBreakers = {
-  "asabi,adalati": [
+  "adalati,asabi": [
     {q:"جسم کی جلد کیسی محسوس ہوتی ہے؟", a:"نرم اور ملائم", am:"asabi", b:"خشک اور کھردری", bm:"adalati"},
     {q:"دل کی دھڑکن کیسی رہتی ہے؟", a:"سست، کمزور", am:"asabi", b:"تیز، زوردار", bm:"adalati"},
     {q:"پیاس کیسی لگتی ہے؟", a:"کم پیاس", am:"asabi", b:"زیادہ پیاس", bm:"adalati"}
