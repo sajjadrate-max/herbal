@@ -36,7 +36,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { diseaseName, message, imageBase64, imageMime, imageFilename } = req.body || {};
+    const { diseaseName, message, imageBase64, imageMime, imageFilename, unknownHerbs, nuskha } = req.body || {};
+
+    // 3) نسخہ سازی میں جس بوٹی/چیز کا مزاج سائٹ اور کتابوں میں نہ ملے — مالک کو ای میل تاکہ وہ مزاج بتا دیں
+    if (Array.isArray(unknownHerbs) && unknownHerbs.length) {
+      const list = unknownHerbs.map(x => String(x || '').trim().slice(0, 60)).filter(Boolean).slice(0, 20);
+      if (!list.length) return res.status(400).json({ error: 'نام خالی ہیں۔' });
+      const resendKey0 = process.env.RESEND_API_KEY, notifyEmail0 = process.env.NOTIFY_EMAIL;
+      const subject0 = `مزاج معلوم نہیں: ${list.join('، ')}`;
+      const text0 = `نسخہ سازی میں ان بوٹیوں/اشیاء کا مزاج نہ سائٹ کی فہرست میں ملا نہ کتابوں (خواص المفردات، کشتہ جات وغیرہ) میں:\n\n${list.map((n, i) => (i + 1) + '۔ ' + n).join('\n')}\n\n${nuskha ? 'مکمل نسخہ جو لکھا گیا تھا:\n"' + String(nuskha).slice(0, 400) + '"\n\n' : ''}براہ کرم ہر ایک کا مزاج (تحریک نمبر 1 سے 6) بتائیں تاکہ اسے سائٹ میں شامل کر دیا جائے اور اگلی بار یہ مسئلہ نہ آئے۔`;
+      if (!resendKey0 || !notifyEmail0) {
+        console.log('نامعلوم مزاج (ای میل سیٹ اپ نہیں):', list.join('، '));
+        return res.status(200).json({ ok: true, emailed: false });
+      }
+      const rr = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendKey0}` },
+        body: JSON.stringify({ from: process.env.FROM_EMAIL || 'onboarding@resend.dev', to: [notifyEmail0], subject: subject0, text: text0 })
+      });
+      return res.status(200).json({ ok: rr.ok, emailed: rr.ok });
+    }
 
     const hasDiseaseName = typeof diseaseName === 'string' && diseaseName.trim();
     const hasMessage = typeof message === 'string' && message.trim();
