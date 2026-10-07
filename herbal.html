@@ -6200,8 +6200,17 @@ function pmIsWordChar(ch){
 }
 // صرف اسی صورت میں مکمل لفظ شمار کریں جب تلاش شدہ لفظ کے فوراً پہلے اور بعد کوئی اور حرف جڑا ہوا نہ ہو —
 // تاکہ کسی دوسرے بڑے/جڑے ہوئے لفظ کے بیچ میں سے اتفاقاً ملنے والا ٹکڑا نتیجے میں شامل نہ ہو
-function pmFindMatch(originalText, queryData){
-  const { searchable, map } = pmBuildSearchable(originalText);
+// ایک ہی صفحے کا متن/عنوان بار بار نارملائز نہ کرنا پڑے (ہر سرچ پر تمام کتابوں کے تمام صفحات دوبارہ
+// پروسیس ہونے سے تلاش سست ہو جاتی تھی) — پہلی بار بننے پر محفوظ کر لیں، اگلی بار وہیں سے استعمال کریں
+const pmSearchableCache = new WeakMap();
+function pmCachedSearchable(obj, field){
+  let entry = pmSearchableCache.get(obj);
+  if(!entry){ entry = {}; pmSearchableCache.set(obj, entry); }
+  if(!entry[field]) entry[field] = pmBuildSearchable(obj[field] || '');
+  return entry[field];
+}
+function pmFindMatch(originalText, queryData, searchableData){
+  const { searchable, map } = searchableData || pmBuildSearchable(originalText);
   let searchFrom = 0;
   while(true){
     const idx = searchable.indexOf(queryData.searchable, searchFrom);
@@ -6998,15 +7007,15 @@ function pmRunSearchBase(customTerms){
         const key = fileEntry.fileName + '|' + p.pageNum;
         if(seenPageKeys.has(key)) return;
         if(p.title){
-          const m = pmFindMatch(p.title, queryData);
+          const m = pmFindMatch(p.title, queryData, pmCachedSearchable(p, 'title'));
           if(m){ titleMatches.push({ fileName: fileEntry.fileName, pageNum: p.pageNum, displayPageNum: p.printedPageNum || p.pageNum, snippet: pmBuildSnippet(p.title, m.startOrig, m.endOrig), fullText: p.text, matchedTerm: term }); seenPageKeys.add(key); return; }
         }
         if(p.text){
-          const m2 = pmFindMatch(p.text, queryData);
+          const m2 = pmFindMatch(p.text, queryData, pmCachedSearchable(p, 'text'));
           if(m2){ textMatches.push({ fileName: fileEntry.fileName, pageNum: p.pageNum, displayPageNum: p.printedPageNum || p.pageNum, snippet: pmBuildSnippet(p.text, m2.startOrig, m2.endOrig), fullText: p.text, matchedTerm: term }); seenPageKeys.add(key); return; }
           // اردو OCR اکثر دو الفاظ کے درمیان خالی جگہ صحیح طور پر نہیں پہچانتا (لفظ آپس میں جڑ جاتے ہیں) —
           // اس لیے اگر مکمل/الگ لفظ کے طور پر نہ ملے تو آخری چارے کے طور پر بغیر لفظ کی حد کے بھی تلاش کریں
-          const { searchable } = pmBuildSearchable(p.text);
+          const { searchable } = pmCachedSearchable(p, 'text');
           if(searchable.indexOf(queryData.searchable) !== -1){
             looseMatches.push({ fileName: fileEntry.fileName, pageNum: p.pageNum, displayPageNum: p.printedPageNum || p.pageNum, snippet: pmBuildSnippet(p.text, 0, Math.min(p.text.length, 220)), fullText: p.text, matchedTerm: term });
             seenPageKeys.add(key);
@@ -7029,7 +7038,7 @@ function pmRunSearchBase(customTerms){
       pmLibrary.forEach(fileEntry=> fileEntry.pages.forEach(p=>{
         const key = fileEntry.fileName + '|' + p.pageNum;
         if(seenPageKeys.has(key) || !p.text) return;
-        const hits = qds.filter(q=> pmFindMatch(p.text, q));
+        const hits = qds.filter(q=> pmFindMatch(p.text, q, pmCachedSearchable(p, 'text')));
         if(hits.length < need) return;
         textMatches.push({ fileName: fileEntry.fileName, pageNum: p.pageNum, displayPageNum: p.printedPageNum || p.pageNum, snippet: pmBuildSnippet(p.text, 0, Math.min(p.text.length, 220)), fullText: p.text, matchedTerm: words.join(' ') });
         seenPageKeys.add(key);
@@ -7196,11 +7205,11 @@ function pmAiCandidates(question, terms, words, libArg){
   const qWords = String(question).split(/[\s،,\/()\-؟?]+/).filter(w=> w.length >= 3 && !PM_WEAK2.has(w));
   const termQ = [...new Set([question].concat(terms))].map(t=> ({ t, q: pmBuildSearchable(t) })).filter(x=> x.q.searchable && x.q.searchable.length >= 3);
   const wordQ = [...new Set(words.concat(qWords))].map(w=> pmBuildSearchable(w)).filter(q=> q.searchable && q.searchable.length >= 2);
-  const scoreText = (txt, full)=>{
+  const scoreText = (txt, full, cachedData)=>{
     if(!txt) return { score:0, hits:[] };
     let score = 0; const hits = [];
-    termQ.forEach((x, i)=>{ if(pmFindMatch(txt, x.q)){ score += full ? (i === 0 ? 12 : 5) : 1; hits.push(x.q); } });
-    const wHits = wordQ.filter(q=> pmFindMatch(txt, q));
+    termQ.forEach((x, i)=>{ if(pmFindMatch(txt, x.q, cachedData)){ score += full ? (i === 0 ? 12 : 5) : 1; hits.push(x.q); } });
+    const wHits = wordQ.filter(q=> pmFindMatch(txt, q, cachedData));
     if(wHits.length >= 2) score += wHits.length * (full ? 2 : 0.5);
     else if(wHits.length === 1 && score > 0) score += full ? 1 : 0;
     return { score, hits: hits.concat(wHits) };
@@ -7220,7 +7229,7 @@ function pmAiCandidates(question, terms, words, libArg){
         snippet = (headStr ? 'اس صفحے پر شروع ہونے والے عنوان: ' + headStr.slice(0, 330) : 'اس صفحے پر کوئی نیا عنوان شروع نہیں ہوتا') +
           (contStr ? ' || پچھلے صفحے سے جاری (یہاں صرف آخری حصہ): ' + contStr.slice(0, 90) : '');
       }else{
-        const a = scoreText(p.text, true);
+        const a = scoreText(p.text, true, pmCachedSearchable(p, 'text'));
         score = a.score; snippet = pmAiSnippet(p.text, a.hits);
       }
       if(score < 4) return;
