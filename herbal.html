@@ -104,6 +104,12 @@ h2.section-title{color:var(--gold); font-size:1.8rem; border-bottom:2px solid va
 @media(max-width:650px){.disease-grid{grid-template-columns:1fr 1fr;}}
 input.search, select.search{width:100%; padding:12px 16px; border-radius:8px; border:1px solid var(--border);
   background:var(--card); color:var(--text); font-family:inherit; font-size:1rem; margin-bottom:16px;}
+.suggest-box{position:relative;}
+.suggest-dropdown{display:none; position:absolute; z-index:40; top:100%; right:0; left:0; margin-top:-12px; max-height:260px; overflow-y:auto;
+  background:var(--navy); border:1px solid var(--gold); border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.4);}
+.suggest-item{padding:10px 16px; cursor:pointer; font-size:.95rem; border-bottom:1px solid var(--border);}
+.suggest-item:last-child{border-bottom:none;}
+.suggest-item:hover, .suggest-item.active{background:rgba(212,175,55,0.15); color:var(--gold-soft);}
 table{width:100%; border-collapse:collapse; font-family:'Poppins',sans-serif; font-size:.95rem; margin-bottom:20px;}
 .lecture-text{white-space:pre-wrap; line-height:2.1; font-size:1.05rem; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; max-height:none;}
 .toc-item{background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:8px; cursor:pointer; display:flex; justify-content:space-between;}
@@ -294,8 +300,11 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
     <h3 style="color:var(--gold); text-align:center; margin-bottom:12px;">📜 قانون مفرد اعضاء کے مطابق نسخہ بنائیں</h3>
 
     <label style="color:var(--gold-soft); font-size:.9rem;">بیماری کا نام (اختیاری)</label>
-    <input class="search" id="qmDisease" list="qmDiseaseSuggest" placeholder="مثلاً: قبض، دمہ، یرقان..." style="margin:4px 0 4px;" onchange="qmDiseaseChanged()">
-    <datalist id="qmDiseaseSuggest"></datalist>
+    <div class="suggest-box">
+      <input class="search" id="qmDisease" placeholder="مثلاً: قبض، دمہ، یرقان..." autocomplete="off" style="margin:4px 0 4px;"
+        oninput="qmFilterDiseaseSuggestions()" onfocus="qmFilterDiseaseSuggestions()" onblur="setTimeout(()=>{ document.getElementById('qmDiseaseDropdown').style.display='none'; }, 200)">
+      <div id="qmDiseaseDropdown" class="suggest-dropdown"></div>
+    </div>
     <p id="qmDiseaseHint" style="color:var(--muted); font-size:.78rem; margin:0 0 12px;">فہرست سے بیماری چنیں تو تحریک خود بھر جائے گی۔</p>
 
     <!-- بیمار عضو اور اس کا مزاج صارف کو نظر نہیں آتے — بیماری کے نام سے پس منظر میں خود معلوم کیے جاتے ہیں -->
@@ -3433,13 +3442,6 @@ function qmInit(){
   Object.keys(qmOrganMizajMap()).forEach(name=>{
     const op = document.createElement('option'); op.value = name; op.textContent = name; organSel.appendChild(op);
   });
-  const dl = document.getElementById('qmDiseaseSuggest');
-  const seen = new Set();
-  (typeof diseaseList !== 'undefined' ? diseaseList : []).forEach(d=>{
-    const key = d.name + ' — ' + d.organ;
-    if(seen.has(key)) return; seen.add(key);
-    const op = document.createElement('option'); op.value = key; dl.appendChild(op);
-  });
   document.getElementById('qmKushtaList').innerHTML = QM_KUSHTE.map(k=>
     `<label style="font-size:.9rem;${QM_KUSHTE_TOXIC.includes(k)?' color:#e0524f;':''}"><input type="checkbox" class="qm-kushta" value="${k}"> کشتہ ${k}</label>`).join('');
 }
@@ -3465,14 +3467,35 @@ function qmMatchOrgan(organText){
 function qmDiseaseChanged(){
   const v = document.getElementById('qmDisease').value.trim();
   const hint = document.getElementById('qmDiseaseHint');
-  const [dname, organ] = v.split(' — ');
-  const d = (typeof diseaseList !== 'undefined' ? diseaseList : []).find(x=> x.name === dname && (!organ || x.organ === organ));
+  const d = (typeof diseaseList !== 'undefined' ? diseaseList : []).find(x=> x.name === v);
   if(!d){ hint.textContent = 'فہرست سے بیماری چنیں تو تحریک خود بھر جائے گی۔'; return; }
   document.getElementById('qmDisease').value = d.name;
   document.getElementById('qmTehreek').value = String(d.tendency);
   const o = qmMatchOrgan(d.organ);
   if(o){ document.getElementById('qmOrgan').value = o; qmOrganChanged(); }
   hint.textContent = `✔ "${d.name}" — تحریک: ${QM_T[d.tendency].name}، عضو: ${d.organ}`;
+}
+function qmFilterDiseaseSuggestions(){
+  const box = document.getElementById('qmDiseaseDropdown');
+  const q = document.getElementById('qmDisease').value.trim();
+  const list = (typeof diseaseList !== 'undefined' ? diseaseList : []);
+  const seen = new Set();
+  const matches = [];
+  for(const d of list){
+    if(seen.has(d.name)) continue;
+    if(q && !d.name.includes(q)) continue;
+    seen.add(d.name);
+    matches.push(d.name);
+    if(matches.length >= 40) break;
+  }
+  if(!matches.length){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.innerHTML = matches.map(name=> `<div class="suggest-item" onmousedown="qmSelectDisease('${escapeJsAttr(name)}')">${escapeHtmlSearch(name)}</div>`).join('');
+  box.style.display = 'block';
+}
+function qmSelectDisease(name){
+  document.getElementById('qmDisease').value = name;
+  document.getElementById('qmDiseaseDropdown').style.display = 'none';
+  qmDiseaseChanged();
 }
 document.addEventListener('DOMContentLoaded', qmInit);
 setTimeout(qmInit, 0);
