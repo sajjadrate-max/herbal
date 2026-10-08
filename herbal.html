@@ -341,20 +341,6 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
       <input type="hidden" id="qmTotal" value="100"><!-- سب اجزاء برابر وزن — کل وزن کا خانہ نہیں -->
     </div>
 
-    <div style="border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:12px;">
-      <div onclick="const b=document.getElementById('qmKushtaBox'); const o=b.style.display==='none'; b.style.display=o?'':'none'; document.getElementById('qmKushtaArrow').textContent=o?'▴':'▾';" style="cursor:pointer; color:var(--gold-soft); text-align:center;">کشتہ شامل کریں (اختیاری) <span id="qmKushtaArrow">▾</span></div>
-      <div id="qmKushtaBox" style="display:none; margin-top:10px;">
-        <label style="color:var(--gold-soft); font-size:.85rem;">تیاری کی قسم</label>
-        <select class="search" id="qmKushtaType" style="margin:4px 0 10px;">
-          <option value="pharma">فارماکوپیا — 15 گرام میں 1 گرام (بچے/بوڑھے 20 گرام میں 1 گرام)</option>
-          <option value="mughallaz">مغلظ — 60 گرام میں 1 گرام کشتہ</option>
-          <option value="special">اسپیشل بیماری — 50 گرام میں 10 گرام کشتہ</option>
-        </select>
-        <div id="qmKushtaList" style="display:flex; flex-wrap:wrap; gap:6px 14px;"></div>
-        <p style="color:#e0524f; font-size:.75rem; margin-top:6px;">⚠ کشتہ صرف مستند تیار شدہ ہو اور ماہر حکیم کی نگرانی میں دیں۔ سرخ نشان والے کشتے زہریلی دھات/معدن سے بنتے ہیں۔</p>
-      </div>
-    </div>
-
     <div style="text-align:center;">
       <button class="btn" onclick="qmShowHerbs()" style="border-radius:20px;">آگے — جڑی بوٹیاں دکھائیں</button>
     </div>
@@ -3436,8 +3422,6 @@ function qmInit(){
   Object.keys(qmOrganMizajMap()).forEach(name=>{
     const op = document.createElement('option'); op.value = name; op.textContent = name; organSel.appendChild(op);
   });
-  document.getElementById('qmKushtaList').innerHTML = QM_KUSHTE.map(k=>
-    `<label style="font-size:.9rem;${QM_KUSHTE_TOXIC.includes(k)?' color:#e0524f;':''}"><input type="checkbox" class="qm-kushta" value="${k}"> کشتہ ${k}</label>`).join('');
 }
 function qmOrganChanged(){
   const name = document.getElementById('qmOrgan').value;
@@ -4678,11 +4662,7 @@ function qmRenderHerbs(aiChosen){
   const isDis = h=> h.aiDisease || (!aiChosen && (h.why === 'fayda' || qmHerbScore(h.f, text) > 0));
   const disH = chosen.filter(isDis), supH = chosen.filter(h=> !isDis(h));
   const prevStatus = (document.getElementById('qmAiStatus') || {}).innerHTML || '';
-  const qmCz = herbalGetCausesCached(dName);
-  const qmCzPending = !qmCz && qmAiLive() && !!HERBAL_CAUSE_PENDING[herbalCauseKey(dName)];
-  const qmUi = HERBAL_CAUSE_UI.qm;
-  const qmAsk = qmCz && qmUi && qmUi.name === dName && herbalNeedsCauseAnswer('qm', dName);
-  step2.innerHTML = `${qmOrganOnlyHint(dName)}${(qmCz && qmUi && qmUi.name === dName) ? herbalCauseBoxHtml('qm') + (qmAsk ? '<p style="color:var(--gold-soft); font-size:.8rem; margin:-6px 0 10px;">👆 جواب دیں تو نیچے کا نسخہ اسی وجہ کے مطابق بدل جائے گا۔</p>' : '') : ''}${qmCzPending ? '<p style="color:var(--muted); font-size:.78rem; margin-bottom:8px;">📘 ساتھ ساتھ کتابوں سے اس مرض کی وجوہات بھی دیکھی جا رہی ہیں — ملنے پر یہاں سوال آئے گا۔ نیچے کا نسخہ ابھی سے استعمال کر سکتے ہیں۔</p>' : ''}<p id="qmAiStatus" style="color:var(--gold-soft); font-size:.8rem; margin-bottom:6px;">${aiChosen ? '🤖 کتابوں اور طب یونانی کے مطابق AI کا تیار کردہ نسخہ' : prevStatus}</p><p style="color:var(--gold); font-size:.95rem; margin-bottom:8px;">🌿 ${text ? `"${escapeHtmlSearch(dName)}" کے لیے ` : ''}نسخے کے اجزاء:</p>
+  step2.innerHTML = `${qmOrganOnlyHint(dName)}<p id="qmAiStatus" style="color:var(--gold-soft); font-size:.8rem; margin-bottom:6px;">${aiChosen ? '🤖 کتابوں اور طب یونانی کے مطابق AI کا تیار کردہ نسخہ' : prevStatus}</p><p style="color:var(--gold); font-size:.95rem; margin-bottom:8px;">🌿 ${text ? `"${escapeHtmlSearch(dName)}" کے لیے ` : ''}نسخے کے اجزاء:</p>
     <div style="border:1px solid var(--border); border-right:4px solid var(--gold); border-radius:10px; padding:10px 12px; margin-bottom:12px;">
       ${disH.length ? `<div style="color:var(--gold-soft); font-size:.82rem;">مرض کے لیے</div>${disH.map(h=> qmHerbRow(h, true, h.why, h.k)).join('')}` : (window.qmAiBusy) ? `<p style="color:var(--gold-soft); font-size:.85rem;">⏳ ابھی انتظار کریں — جڑی بوٹیاں چنی جا رہی ہیں...</p>` : (herbalChosenCause('qm', dName) ? `<p style="color:#e0524f; font-size:.85rem;">"${escapeHtmlSearch(herbalChosenCause('qm', dName).cause)}" کے لیے فہرست میں کوئی خاص بوٹی نہیں ملی — نیچے "دوسری جڑی بوٹیاں" میں سے منتخب کریں۔</p>` : `<p style="color:#e0524f; font-size:.85rem;">اس نام سے مرض کی کوئی خاص بوٹی نہیں ملی — مرض کا پورا نام لکھیں (مثلاً "${escapeHtmlSearch(dName)} میں درد" یا "${escapeHtmlSearch(dName)} کی کمزوری")۔</p>`)}
       ${supH.length ? `<div style="color:var(--gold-soft); font-size:.82rem; margin-top:10px; border-top:1px dashed var(--border); padding-top:8px;">ساتھ میں (طاقت، ہاضمہ، جراثیم کش)</div>${supH.map(h=> qmHerbRow(h, disH.length > 0, h.why, h.k)).join('')}` : ''}
@@ -4707,8 +4687,8 @@ function qmBuild(){
   const disease = document.getElementById('qmDisease').value.trim();
   const organName = document.getElementById('qmOrgan').value;
   const organT = parseInt(document.getElementById('qmOrganMizaj').value, 10) || 0;
-  const kushte = Array.from(document.querySelectorAll('.qm-kushta:checked')).map(c=> c.value);
-  const kType = document.getElementById('qmKushtaType').value;
+  const kushte = []; // کشتہ کا دستی انتخاب ہٹا دیا گیا — نیچے صرف خودکار تجویز (qmKushtaSuggestHtml) دکھائی جاتی ہے
+  const kType = 'pharma';
   const out = document.getElementById('qmResult');
   const dText = qmDiseaseText();
   const t1 = qmNext(t, 2), t3 = qmNext(t, 3);
