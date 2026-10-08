@@ -4764,9 +4764,22 @@ function qmBuild(){
   const wSum = Object.keys(GRP_W).reduce((x,g)=> x + (covered[g] ? GRP_W[g] : 0), 0) || 100;
   const cnt = { d: covered.d ? 1 : 0, s: covered.s ? 1 : 0, h: covered.h ? 1 : 0, a: covered.a ? 1 : 0 };
   const grpPct = g=> cnt[g] ? Math.round(GRP_W[g] / wSum * 100) : 0;
+  // نسخے کی مجموعی طاقت — منتخب بوٹیوں کے درجہ (1 غذائی، 2 عام، 3 تیز) کی مقدار کے حساب سے تناسب (کشتہ شامل نہیں)
+  const levelPct = { 1:0, 2:0, 3:0 };
+  rows.forEach(r=>{
+    const h = QM_HERBS.find(x=> x.n === r.name);
+    const lvl = h ? qmHerbLevel(h) : 2;
+    levelPct[lvl] = (levelPct[lvl] || 0) + r.pct;
+  });
+  const levelLabel = { 1:'غذائی/نرم', 2:'عام دوا', 3:'تیز دوا' };
+  const dominantLvl = Object.keys(levelPct).reduce((a,b)=> levelPct[+b] > levelPct[+a] ? +b : +a, 1);
+  // طاقت کا اوسط اشاریہ (1 سے 3) — درجہ 2 (عام) بنیادی خوراک ہے؛ زیادہ تر نرم ہو تو خوراک تھوڑی بڑھے،
+  // زیادہ تر تیز ہو تو خوراک کم ہو (وہی اصول جو ایک ایک بوٹی پر پہلے سے لاگو ہے — "تیز دوا کم مقدار میں")
+  const potencyIdx = (levelPct[1] * 1 + levelPct[2] * 2 + levelPct[3] * 3) / 100;
+  const doseFactor = potencyIdx <= 1.5 ? 1.25 : (potencyIdx >= 2.5 ? 0.75 : 1);
   let dose;
-  // خوراک ملی گرام میں: جوان 1000، بوڑھا 750، بچہ 250 ملی گرام — گولی ہمیشہ 500 ملی گرام (چنے کے برابر) کی
-  const doseMg = age === 'child' ? 250 : (age === 'old' ? 750 : 1000);
+  // خوراک ملی گرام میں: جوان 1000، بوڑھا 750، بچہ 250 ملی گرام — نسخے کی طاقت کے مطابق گھٹائی/بڑھائی جاتی ہے — گولی ہمیشہ 500 ملی گرام (چنے کے برابر) کی
+  const doseMg = Math.round((age === 'child' ? 250 : (age === 'old' ? 750 : 1000)) * doseFactor / 50) * 50;
   const pillCount = mg=>{ const n = Math.max(1, Math.round(mg / QM_PILL_MG)); return n === 1 ? 'ایک گولی' : n + ' گولیاں'; };
   dose = `${doseMg} ملی گرام (${pillCount(doseMg)}) — دن میں تین بار`;
   if(kushte.length){
@@ -4778,16 +4791,7 @@ function qmBuild(){
   const eat = [...new Set([...QM_T[t3].d1, ...QM_T[t1].d1])];
   const avoid = QM_T[t].d1;
   const th = 'padding:6px; border-bottom:1px solid var(--border);';
-  // نسخے کی مجموعی طاقت — منتخب بوٹیوں کے درجہ (1 غذائی، 2 عام، 3 تیز) کی مقدار کے حساب سے تناسب (کشتہ شامل نہیں)
-  const levelPct = { 1:0, 2:0, 3:0 };
-  rows.forEach(r=>{
-    const h = QM_HERBS.find(x=> x.n === r.name);
-    const lvl = h ? qmHerbLevel(h) : 2;
-    levelPct[lvl] = (levelPct[lvl] || 0) + r.pct;
-  });
-  const levelLabel = { 1:'غذائی/نرم', 2:'عام دوا', 3:'تیز دوا' };
-  const dominantLvl = Object.keys(levelPct).reduce((a,b)=> levelPct[+b] > levelPct[+a] ? +b : +a, 1);
-  const powerHtml = `<p style="font-size:.88rem;"><b style="color:var(--gold-soft);">نسخے کی طاقت:</b> ${[1,2,3].filter(l=> levelPct[l] > 0).map(l=> `${qmFmtGram(levelPct[l])}% ${levelLabel[l]} (درجہ ${l})`).join('، ')} — مجموعی طور پر <b>${escapeHtmlSearch(levelLabel[dominantLvl])}</b> نسخہ۔${levelPct[3] > 0 ? ' <span style="color:#e0a050;">⚠ اس میں تیز دوا بھی شامل ہے — خوراک احتیاط سے، خاص طور پر بچوں/بوڑھوں کو۔</span>' : ''}</p>`;
+  const powerHtml = `<p style="font-size:.88rem;"><b style="color:var(--gold-soft);">نسخے کی طاقت:</b> ${[1,2,3].filter(l=> levelPct[l] > 0).map(l=> `${qmFmtGram(levelPct[l])}% ${levelLabel[l]} (درجہ ${l})`).join('، ')} — مجموعی طور پر <b>${escapeHtmlSearch(levelLabel[dominantLvl])}</b> نسخہ۔${doseFactor !== 1 ? ` اسی لیے خوراک ${doseFactor > 1 ? 'بڑھا کر' : 'گھٹا کر'} تجویز کی گئی ہے۔` : ''}${levelPct[3] > 0 ? ' <span style="color:#e0a050;">⚠ اس میں تیز دوا بھی شامل ہے — خوراک احتیاط سے، خاص طور پر بچوں/بوڑھوں کو۔</span>' : ''}</p>`;
   const title = (disease ? disease + ' — ' : '') + QM_T[t].name + ' مرض کا نسخہ';
   let html = `<div class="result-card" style="border-right-color:var(--gold);">
     <h3 style="color:var(--gold); margin-bottom:8px;">🌿 ${escapeHtmlSearch(title)}</h3>
