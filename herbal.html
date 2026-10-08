@@ -3945,7 +3945,10 @@ function qmOrganOnlyHint(name){
   </div>`;
 }
 function qmHerbRow(h, checked, why, k){
-  return `<label style="display:block; font-size:.92rem; margin:8px 0;"><input type="checkbox" class="qm-herb" data-k="${k === undefined ? '' : k}" data-t="${h.t}" data-level="2" value="${escapeHtmlSearch(h.n)}" ${checked?'checked':''}> <b>${escapeHtmlSearch(h.n)}</b><br><span style="color:var(--muted); font-size:.82rem; margin-right:24px;">${escapeHtmlSearch(h.f)}</span></label>`;
+  const faideList = String(h.f || '').split('،').map(x=> x.trim()).filter(Boolean);
+  const faideHtml = faideList.map(x=> `<div>• ${escapeHtmlSearch(x)}</div>`).join('');
+  const T = QM_T[h.t];
+  return `<label style="display:block; font-size:.92rem; margin:8px 0;"><input type="checkbox" class="qm-herb" data-k="${k === undefined ? '' : k}" data-t="${h.t}" data-level="2" value="${escapeHtmlSearch(h.n)}" ${checked?'checked':''}> <b>${escapeHtmlSearch(h.n)}</b>${T ? ` <span style="color:var(--gold-soft); font-size:.78rem;">— مزاج: نمبر ${h.t} ${escapeHtmlSearch(T.name)}</span>` : ''}<div style="color:var(--muted); font-size:.82rem; margin-right:24px;">${faideHtml}</div></label>`;
 }
 // ===== AI (OpenAI — سرور کے ذریعے): بیماری کے دوسرے نام + کتابوں کے مطابق نسخہ =====
 const QM_SYN_CACHE = {};
