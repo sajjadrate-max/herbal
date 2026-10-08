@@ -3944,9 +3944,23 @@ function qmOrganOnlyHint(name){
     <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">${opts.map(d=> `<span onclick="document.getElementById('qmDisease').value='${escapeJsAttr(d.name)}'; document.getElementById('qmTehreek').value='${d.tendency}'; qmShowHerbs();" style="cursor:pointer; border:1px solid var(--gold); color:var(--gold); border-radius:14px; padding:2px 10px; font-size:.82rem;">${escapeHtmlSearch(d.name)}</span>`).join('') || '<span style="color:var(--muted); font-size:.82rem;">مثلاً: ' + escapeHtmlSearch(n) + ' میں چھالے، ' + escapeHtmlSearch(n) + ' میں درد</span>'}</div>
   </div>`;
 }
+// کسی بوٹی کے فائدے (مثلاً "بواسیر") کا کتاب "تحریک امراض اور علاج" (ص 81-84، حوالہ شدہ صفحات) کے
+// اسی تحریک کی دواؤں کے خواص میں بھی ذکر ہو تو زیادہ مستند — ورنہ صرف عام یونانی معلومات سے (QM_HERBS کا اپنا فیلڈ)۔
+// فیصد نہیں — صرف اتنا یقینی ہے (لمبی/چھوٹی پٹی) کہ کوئی جھوٹا عدد نہ بنے
+function qmFaideCited(h, item){
+  const g = (typeof HZ_TK_GROUPS !== 'undefined') ? HZ_TK_GROUPS.find(x=> x.t === h.t) : null;
+  if(!g) return false;
+  const words = String(item).split(/\s+/).filter(w=> w.length > 1 && !QM_GROUP_STOP.has(w));
+  return words.some(w=> g.khawas.includes(w));
+}
+function qmFaideBarHtml(h, item){
+  const cited = qmFaideCited(h, item);
+  const title = cited ? 'کتاب تحریک امراض اور علاج کے حوالہ شدہ صفحے میں بھی یہی فائدہ درج ہے' : 'صرف عام یونانی معلومات سے — کسی حوالہ شدہ صفحے میں یہ فائدہ نہیں ملا';
+  return `<span title="${escapeHtmlSearch(title)}" style="display:inline-block; vertical-align:middle; height:5px; border-radius:3px; margin-right:6px; background:${cited ? 'var(--gold)' : 'var(--border)'}; width:${cited ? '34px' : '16px'};"></span>`;
+}
 function qmHerbRow(h, checked, why, k){
   const faideList = String(h.f || '').split('،').map(x=> x.trim()).filter(Boolean);
-  const faideHtml = faideList.map(x=> `<div>• ${escapeHtmlSearch(x)}</div>`).join('');
+  const faideHtml = faideList.map(x=> `<div>${qmFaideBarHtml(h, x)}${escapeHtmlSearch(x)}</div>`).join('');
   const T = QM_T[h.t];
   return `<label style="display:block; font-size:.92rem; margin:8px 0;"><input type="checkbox" class="qm-herb" data-k="${k === undefined ? '' : k}" data-t="${h.t}" data-level="2" value="${escapeHtmlSearch(h.n)}" ${checked?'checked':''}> <b>${escapeHtmlSearch(h.n)}</b>${T ? ` <span style="color:var(--gold-soft); font-size:.78rem;">— مزاج: نمبر ${h.t} ${escapeHtmlSearch(T.name)}</span>` : ''}<div style="color:var(--muted); font-size:.82rem; margin-right:24px;">${faideHtml}</div></label>`;
 }
