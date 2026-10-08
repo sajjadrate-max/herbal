@@ -4674,6 +4674,9 @@ function qmRenderHerbs(aiChosen){
   const pool = [t1, t3]; if(organT && organT !== t && !pool.includes(organT)) pool.push(organT);
   const others = QM_HERBS.filter(h=> pool.includes(h.t) && !chosen.some(c=> c.n === h.n))
     .sort((a,b)=> qmHerbScore(b.f, text) - qmHerbScore(a.f, text) || a.t - b.t || a.r - b.r);
+  // باقی تمام مزاج کی بوٹیاں بھی — تاکہ صارف خود جو چاہے آزادانہ شامل کر سکے
+  const allOthers = QM_HERBS.filter(h=> !pool.includes(h.t) && !chosen.some(c=> c.n === h.n))
+    .sort((a,b)=> a.t - b.t || a.r - b.r);
   const kOf = h=> h.t === t3 ? 3 : (h.t === t1 ? 1 : 0);
   // مرض کی بوٹیاں اور ساتھ والی (طاقت، ہاضمہ، جراثیم کش) الگ الگ دکھائیں
   const isDis = h=> h.aiDisease || (!aiChosen && (h.why === 'fayda' || qmHerbScore(h.f, text) > 0));
@@ -4690,6 +4693,10 @@ function qmRenderHerbs(aiChosen){
       <details style="margin-top:8px;">
         <summary style="cursor:pointer; color:var(--gold-soft); font-size:.8rem;">دوسری جڑی بوٹیاں (${others.length})</summary>
         <div style="margin-top:6px;">${others.map(h=> qmHerbRow(h, false, '', kOf(h))).join('')}</div>
+      </details>
+      <details style="margin-top:4px;">
+        <summary style="cursor:pointer; color:var(--gold-soft); font-size:.8rem;">تمام جڑی بوٹیاں — تمام مزاج (${allOthers.length}) — جو مرضی خود شامل کریں</summary>
+        <div style="margin-top:6px;">${allOthers.map(h=> qmHerbRow(h, false, '', kOf(h))).join('')}</div>
       </details>
     </div>
     ${qmKushtaSuggestHtml(t, organT, text, 100, document.getElementById('qmAge').value)}
@@ -4779,6 +4786,16 @@ function qmBuild(){
   const eat = [...new Set([...QM_T[t3].d1, ...QM_T[t1].d1])];
   const avoid = QM_T[t].d1;
   const th = 'padding:6px; border-bottom:1px solid var(--border);';
+  // نسخے کی مجموعی طاقت — منتخب بوٹیوں کے درجہ (1 غذائی، 2 عام، 3 تیز) کی مقدار کے حساب سے تناسب (کشتہ شامل نہیں)
+  const levelPct = { 1:0, 2:0, 3:0 };
+  rows.forEach(r=>{
+    const h = QM_HERBS.find(x=> x.n === r.name);
+    const lvl = h ? qmHerbLevel(h) : 2;
+    levelPct[lvl] = (levelPct[lvl] || 0) + r.pct;
+  });
+  const levelLabel = { 1:'غذائی/نرم', 2:'عام دوا', 3:'تیز دوا' };
+  const dominantLvl = Object.keys(levelPct).reduce((a,b)=> levelPct[+b] > levelPct[+a] ? +b : +a, 1);
+  const powerHtml = `<p style="font-size:.88rem;"><b style="color:var(--gold-soft);">نسخے کی طاقت:</b> ${[1,2,3].filter(l=> levelPct[l] > 0).map(l=> `${qmFmtGram(levelPct[l])}% ${levelLabel[l]} (درجہ ${l})`).join('، ')} — مجموعی طور پر <b>${escapeHtmlSearch(levelLabel[dominantLvl])}</b> نسخہ۔${levelPct[3] > 0 ? ' <span style="color:#e0a050;">⚠ اس میں تیز دوا بھی شامل ہے — خوراک احتیاط سے، خاص طور پر بچوں/بوڑھوں کو۔</span>' : ''}</p>`;
   const title = (disease ? disease + ' — ' : '') + QM_T[t].name + ' مرض کا نسخہ';
   let html = `<div class="result-card" style="border-right-color:var(--gold);">
     <h3 style="color:var(--gold); margin-bottom:8px;">🌿 ${escapeHtmlSearch(title)}</h3>
@@ -4789,7 +4806,7 @@ function qmBuild(){
       ${rows.map(r=>`<tr><td style="${th}"><b>${escapeHtmlSearch(r.name)}</b>${qmFaide(r.name) ? `<br><span style="color:var(--muted); font-size:.72rem;">${escapeHtmlSearch(qmFaide(r.name))}</span>` : ''}</td><td style="text-align:center; ${th}"><b>${qmFmtGram(r.pct)}%</b><br><span style="color:var(--muted); font-size:.75rem;">100 گرام میں ${qmFmtGram(r.pct)} گرام</span></td></tr>`).join('')}
       ${kushtaRows.map(r=>`<tr><td style="${th}${r.toxic?' color:#e0524f;':''}">${escapeHtmlSearch(r.name)} <span style="color:var(--muted); font-size:.75rem;">(کشتہ)</span></td><td style="text-align:center; ${th}">${r.per}</td></tr>`).join('')}
     </table>
-
+    ${powerHtml}
     <p><b style="color:var(--gold-soft);">ترکیب:</b> ${form === 'goli' ? 'سب کو باریک پیس کر پانی کی مدد سے 250 ملی گرام (چنے کے برابر) کی گولیاں بنا لیں۔' : 'سب کو باریک پیس کر سفوف بنا لیں اور بند ڈبے میں رکھیں۔'}</p>
     <p><b style="color:var(--gold-soft);">خوراک:</b> ${dose}، ${anupan}۔</p>
     <p><b style="color:var(--gold-soft);">غذا (کھائیں):</b> ${eat.join('، ')}</p>
