@@ -4322,6 +4322,107 @@ function herbalParseNuskha(txt){
   if(nameBuf.length) flush(0, '');
   return items.filter(x=> x.name.length >= 2);
 }
+// جس بوٹی کا نام ٹائپنگ/OCR کی غلطی کی وجہ سے نہ ملے — اسی نام پر ٹیپ کرنے پر ملتے جلتے اصل نام دکھائیں
+// تاکہ صحیح نام منتخب کیا جا سکے (بجائے دوبارہ ٹائپ کرنے کے)
+function herbalAllKnownNames(){
+  if(herbalAllKnownNames._cache) return herbalAllKnownNames._cache;
+  const seen = new Set(); const list = [];
+  const add = n=>{ n = String(n || '').trim(); if(!n || seen.has(n)) return; seen.add(n); list.push(n); };
+  if(typeof HZ_TK_GROUPS !== 'undefined') HZ_TK_GROUPS.forEach(g=> String(g.names || '').split('،').forEach(n=> add(n)));
+  if(typeof QM_HERBS !== 'undefined') QM_HERBS.forEach(h=> add(h.n));
+  if(typeof QM_KUSHTA_INFO !== 'undefined') QM_KUSHTA_INFO.forEach(k=> add(k.n));
+  Object.keys(HERBAL_OWNER_MIZAJ).forEach(add);
+  herbalAllKnownNames._cache = list;
+  return list;
+}
+function herbalLevenshtein(a, b){
+  const m = a.length, n = b.length;
+  if(!m) return n; if(!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, j)=> j);
+  for(let i = 1; i <= m; i++){
+    const cur = [i];
+    for(let j = 1; j <= n; j++) cur[j] = a[i-1] === b[j-1] ? prev[j-1] : 1 + Math.min(prev[j-1], prev[j], cur[j-1]);
+    prev = cur;
+  }
+  return prev[n];
+}
+// ایک لفظ کی دوسرے لفظ سے مماثلت (0 سے 1) — پورے فقرے کی Levenshtein ملاوٹ کے ساتھ
+function herbalWordSim(a, b){
+  if(!a || !b) return 0;
+  const d = (a.indexOf(b) !== -1 || b.indexOf(a) !== -1) ? Math.abs(a.length - b.length) * 0.3 : herbalLevenshtein(a, b);
+  return 1 - d / Math.max(a.length, b.length);
+}
+function herbalSimilarNames(name, limit){
+  const q = hzNormName(name);
+  if(!q || q.length < 2) return [];
+  const qWords = String(name).trim().split(/\s+/).map(w=> hzNormName(w)).filter(Boolean);
+  const scored = herbalAllKnownNames().map(n=>{
+    const cn = hzNormName(n);
+    if(!cn || cn === q) return null;
+    const fullSim = herbalWordSim(q, cn);
+    // الگ الگ لفظوں کا موازنہ بھی کریں — تاکہ "کونج کے بیج" جیسا ادھورا/غلط نام بھی
+    // "کونچ کے بیج مدبر" سے میل کھا جائے (آخری لفظ چھوٹنے سے پورے فقرے کا فاصلہ بہت بڑھ جاتا ہے)
+    const cWords = String(n).trim().split(/\s+/).map(w=> hzNormName(w)).filter(Boolean);
+    let wordSim = 0;
+    if(qWords.length && cWords.length){
+      let total = 0;
+      qWords.forEach(qw=> { total += Math.max(...cWords.map(cw=> herbalWordSim(qw, cw))); });
+      wordSim = total / qWords.length;
+    }
+    const sim = Math.max(fullSim, wordSim);
+    return sim >= 0.45 ? { n, sim } : null;
+  }).filter(Boolean).sort((a, b)=> b.sim - a.sim);
+  return scored.slice(0, limit || 6).map(x=> x.n);
+}
+function herbalSimilarChipsHtml(names, onclickFor){
+  if(!names.length) return `<p style="color:var(--muted); font-size:.78rem; margin-top:4px;">کوئی ملتا جلتا نام نہیں ملا — نام درست کر کے دوبارہ لکھیں۔</p>`;
+  return `<div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:6px;">${names.map(n=> `<span onclick="${onclickFor(n)}" style="cursor:pointer; border:1px solid var(--gold); color:var(--gold-soft); border-radius:14px; padding:2px 10px; font-size:.8rem;">${escapeHtmlSearch(n)}</span>`).join('')}</div>`;
+}
+function herbalToggleSimilar(idx){
+  const wrap = document.getElementById(`herbalSimWrap-${idx}`);
+  if(!wrap) return;
+  const show = wrap.style.display === 'none';
+  wrap.style.display = show ? 'block' : 'none';
+  if(show && !wrap.dataset.filled){
+    const part = (window.herbalCurrentParts || [])[idx];
+    wrap.innerHTML = part ? herbalSimilarChipsHtml(herbalSimilarNames(part.name), n=> `herbalPickSimilarComposite(${idx}, '${escapeJsAttr(n)}')`) : '';
+    wrap.dataset.filled = '1';
+  }
+}
+function herbalPickSimilarComposite(idx, newName){
+  const parts = window.herbalCurrentParts || [];
+  const old = parts[idx];
+  if(!old) return;
+  parts[idx] = Object.assign(herbalLocalItem(newName), { amount: old.amount, grams: old.grams });
+  herbalRenderCompositeFull(parts, window.herbalCurrentNuskhaName || '');
+}
+function herbalToggleSimilarSingle(){
+  const wrap = document.getElementById('herbalSimWrapSingle');
+  if(!wrap) return;
+  const show = wrap.style.display === 'none';
+  wrap.style.display = show ? 'block' : 'none';
+  if(show && !wrap.dataset.filled){
+    wrap.innerHTML = herbalSimilarChipsHtml(herbalSimilarNames(window.herbalCurrentSingleName || ''), n=> `herbalPickSimilarSingle('${escapeJsAttr(n)}')`);
+    wrap.dataset.filled = '1';
+  }
+}
+function herbalPickSimilarSingle(newName){
+  const inp = document.getElementById('itemInfoInput');
+  if(!inp) return;
+  inp.value = newName;
+  herbalItemInfo();
+}
+function herbalRenderCompositeFull(parts, nuskhaName){
+  const out = document.getElementById('itemInfoResult');
+  if(!out) return;
+  window.herbalCurrentParts = parts;
+  window.herbalCurrentNuskhaName = nuskhaName;
+  const mix = herbalMixMizaj(parts);
+  const openBtn = (pg, q, label)=> pg ? `<button class="btn secondary" onclick="herbalItemOpen('${pg.lib}', '${escapeJsAttr(pg.fileName)}', ${pg.pageNum}, '${escapeJsAttr(q)}')" style="border-radius:16px; padding:3px 12px; font-size:.78rem; margin:2px;">📖 ${escapeHtmlSearch(label || 'کتاب میں دیکھیں')}</button>` : '';
+  out.innerHTML = herbalCompositeLocalHtml(parts, mix) +
+    `<div style="font-size:.8rem; color:var(--muted); margin-top:4px;">ہر جزو کا کتاب والا صفحہ: ${parts.map(p=> p.khawas ? openBtn({ lib:'hz', fileName:p.khawas.fe.fileName, pageNum:p.khawas.p.pageNum }, p.base || p.name, p.name) : '').join('') || '—'}</div>`;
+  herbalItemNotifyUnknown(nuskhaName, true, parts, null);
+}
 function herbalMixMizaj(parts){
   const tot = {}; let sum = 0;
   parts.forEach(p=>{ if(!p.t) return; const w = p.grams || 1; tot[p.t] = (tot[p.t] || 0) + w; sum += w; });
@@ -4329,7 +4430,7 @@ function herbalMixMizaj(parts){
   return { list, top: list[0] || null };
 }
 function herbalCompositeLocalHtml(parts, mix){
-  const rows = parts.map(p=> `<tr><td style="padding:4px 6px;"><b>${escapeHtmlSearch(p.name)}</b></td><td style="padding:4px 6px;">${escapeHtmlSearch(p.amount || '—')}</td><td style="padding:4px 6px;">${p.mizaj ? escapeHtmlSearch(p.mizaj) + (p.mizajSrc ? '<br><span style="color:var(--muted); font-size:.72rem;">(' + escapeHtmlSearch(p.mizajSrc) + ')</span>' : '') : '<span style="color:#e0a050;">❓ اس کا مزاج معلوم نہیں</span>'}${p.darja ? '<br><span style="color:var(--muted); font-size:.75rem;">' + escapeHtmlSearch(p.darja) + '</span>' : ''}</td><td style="padding:4px 6px; font-size:.8rem;">${escapeHtmlSearch(p.faide || '')}</td></tr>`).join('');
+  const rows = parts.map((p, i)=> `<tr><td style="padding:4px 6px;"><b>${escapeHtmlSearch(p.name)}</b></td><td style="padding:4px 6px;">${escapeHtmlSearch(p.amount || '—')}</td><td style="padding:4px 6px;">${p.mizaj ? escapeHtmlSearch(p.mizaj) + (p.mizajSrc ? '<br><span style="color:var(--muted); font-size:.72rem;">(' + escapeHtmlSearch(p.mizajSrc) + ')</span>' : '') : `<span onclick="herbalToggleSimilar(${i})" style="color:#e0a050; cursor:pointer; text-decoration:underline dotted;">❓ نام غلط لگ رہا ہے؟ ملتے جلتے نام دیکھیں</span><div id="herbalSimWrap-${i}" style="display:none;"></div>`}${p.darja ? '<br><span style="color:var(--muted); font-size:.75rem;">' + escapeHtmlSearch(p.darja) + '</span>' : ''}</td><td style="padding:4px 6px; font-size:.8rem;">${escapeHtmlSearch(p.faide || '')}</td></tr>`).join('');
   const unk = parts.filter(p=> !p.t).map(p=> p.name);
   const unkHtml = unk.length ? `<div style="margin-top:8px; color:#e0a050;">❓ ان کا مزاج معلوم نہیں: <b>${unk.map(escapeHtmlSearch).join('، ')}</b><div id="herbalUnkMail" style="color:var(--muted); font-size:.78rem;"></div></div>` : '';
   const mixHtml = unkHtml + (!mix.top ? '' : `<div style="margin-top:8px;"><b style="color:var(--gold);">${unk.length ? `${unk.map(escapeHtmlSearch).join('، ')} کے علاوہ باقی اجزاء کے مطابق پورے نسخے کا مزاج` : 'پورے نسخے کا مزاج'} (مقدار کے حساب سے):</b> ${mix.list.map(x=> `نمبر ${x.t} ${escapeHtmlSearch(HERBAL_TK_NAMES[x.t])} — ${x.pct}%`).join('، ')}<br><span style="color:var(--gold-soft);">⇐ غالب: نمبر ${mix.top.t} — ${escapeHtmlSearch(HERBAL_TK_NAMES[mix.top.t])}</span></div>`);
@@ -4377,10 +4478,7 @@ async function herbalItemInfo(){
   // ---- پورا نسخہ: ہر جزو کا مزاج + پورے نسخے کا مزاج (کتاب کے صفحے کا بٹن ہر جزو کے ساتھ) ----
   if(composite){
     const parts = parsed.map(p=> Object.assign(herbalLocalItem(p.name), { amount: p.amount, grams: p.grams }));
-    const mix = herbalMixMizaj(parts);
-    out.innerHTML = herbalCompositeLocalHtml(parts, mix) +
-      `<div style="font-size:.8rem; color:var(--muted); margin-top:4px;">ہر جزو کا کتاب والا صفحہ: ${parts.map(p=> p.khawas ? openBtn({ lib:'hz', fileName:p.khawas.fe.fileName, pageNum:p.khawas.p.pageNum }, p.base || p.name, p.name) : '').join('') || '—'}</div>`;
-    herbalItemNotifyUnknown(name, true, parts, null);
+    herbalRenderCompositeFull(parts, name);
     return;
   }
   // ---- ایک بوٹی / کشتہ / دوا: مختصر مزاج + کتاب سیدھی اسی صفحے پر، نشانی کے ساتھ ----
@@ -4388,7 +4486,8 @@ async function herbalItemInfo(){
   const li = herbalLocalItem(name);
   const short = li.t
     ? `<div style="font-size:.9rem;"><b style="color:var(--gold);">${escapeHtmlSearch(name)}:</b> مزاج نمبر ${li.t} — ${escapeHtmlSearch(HERBAL_TK_NAMES[li.t])} <span style="color:var(--muted); font-size:.75rem;">(${escapeHtmlSearch(li.mizajSrc)})</span>${li.darja ? ' — ' + escapeHtmlSearch(li.darja) : ''}${li.kushtaNote ? ' — ' + escapeHtmlSearch(li.kushtaNote) : ''}${li.faide ? '<br><span style="color:var(--muted); font-size:.8rem;">فوائد: ' + escapeHtmlSearch(li.faide) + '</span>' : ''}</div>`
-    : `<div style="font-size:.9rem; color:#e0a050;">❓ "${escapeHtmlSearch(name)}" کا مزاج سائٹ کی فہرست میں معلوم نہیں<div id="herbalUnkMail" style="color:var(--muted); font-size:.78rem;"></div></div>`;
+    : `<div style="font-size:.9rem; color:#e0a050;">❓ "${escapeHtmlSearch(name)}" کا مزاج سائٹ کی فہرست میں معلوم نہیں — <span onclick="herbalToggleSimilarSingle()" style="cursor:pointer; text-decoration:underline dotted;">نام غلط لگ رہا ہے؟ ملتے جلتے نام دیکھیں</span><div id="herbalSimWrapSingle" style="display:none;"></div><div id="herbalUnkMail" style="color:var(--muted); font-size:.78rem;"></div></div>`;
+  window.herbalCurrentSingleName = name;
   const status = txt=> `<p style="color:var(--gold-soft); margin-top:6px;">⏳ <b>ابھی انتظار کریں — کام ہو رہا ہے</b><br><span style="font-size:.82rem;">${escapeHtmlSearch(txt)}</span></p>`;
   out.innerHTML = short + status('کتاب میں اس کا صفحہ ڈھونڈا جا رہا ہے...');
   if(!li.t) herbalItemNotifyUnknown(name, false, [], null);
