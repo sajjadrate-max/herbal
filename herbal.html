@@ -337,13 +337,7 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
     <input type="hidden" id="qmSeverity" value="3">
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <input type="hidden" id="qmAge" value="adult"><!-- مریض ہمیشہ جوان (پس منظر میں) -->
-      <div style="flex:1; min-width:140px;">
-        <label style="color:var(--gold-soft); font-size:.9rem;">نسخے کی شکل</label>
-        <select class="search" id="qmForm" style="margin:4px 0 12px;">
-          <option value="safoof">سفوف</option>
-          <option value="goli">گولیاں (چنے کے برابر)</option>
-        </select>
-      </div>
+      <input type="hidden" id="qmForm" value="goli"><!-- نسخے کی شکل ہمیشہ گولیاں (چنے کے برابر، 500 ملی گرام) -->
       <input type="hidden" id="qmTotal" value="100"><!-- سب اجزاء برابر وزن — کل وزن کا خانہ نہیں -->
     </div>
 
@@ -3548,6 +3542,8 @@ function qmAutoDetectOrgan(t){
 // ===== جڑی بوٹیوں کی فہرست: مزاج (t) کتابوں سے، فوائد عام یونانی معلومات سے =====
 // t: تحریک (1-6) — "تحریک امراض اور علاج" کی درجہ بندی (ص 84-86)؛ جو وہاں نہیں وہ "خواص المفردات غدی" سے (src:'kh')
 // r: کتنی عام ہے (1 = بہت عام، آسانی سے ملتی ہے)
+// نسخے کی شکل ہمیشہ چنے کے برابر گولیاں — ہر گولی 500 ملی گرام کی
+const QM_PILL_MG = 500;
 const QM_HERBS = [
   // 1 اعصابی عضلاتی (تر سرد)
   {n:'تخم کاسنی', t:1, r:1, f:'جگر کی گرمی، یرقان، پیشاب کی جلن، بخار، پیاس'},
@@ -4769,18 +4765,14 @@ function qmBuild(){
   const cnt = { d: covered.d ? 1 : 0, s: covered.s ? 1 : 0, h: covered.h ? 1 : 0, a: covered.a ? 1 : 0 };
   const grpPct = g=> cnt[g] ? Math.round(GRP_W[g] / wSum * 100) : 0;
   let dose;
-  // خوراک ملی گرام میں: جوان 1000، بوڑھا 750، بچہ 250 ملی گرام — گولی 250 ملی گرام کی
+  // خوراک ملی گرام میں: جوان 1000، بوڑھا 750، بچہ 250 ملی گرام — گولی ہمیشہ 500 ملی گرام (چنے کے برابر) کی
   const doseMg = age === 'child' ? 250 : (age === 'old' ? 750 : 1000);
-  if(form === 'goli'){
-    const n = doseMg / 250;
-    dose = `${doseMg} ملی گرام (${n === 1 ? 'ایک گولی' : n + ' گولیاں'}) — دن میں تین بار`;
-  } else {
-    dose = `${doseMg} ملی گرام${doseMg >= 1000 ? ' (' + (doseMg/1000) + ' گرام)' : ''} — دن میں تین بار`;
-  }
+  const pillCount = mg=>{ const n = Math.max(1, Math.round(mg / QM_PILL_MG)); return n === 1 ? 'ایک گولی' : n + ' گولیاں'; };
+  dose = `${doseMg} ملی گرام (${pillCount(doseMg)}) — دن میں تین بار`;
   if(kushte.length){
     if(kType === 'mughallaz') dose = 'ایک سے دو چمچ (5 سے 10 ملی لیٹر) — دن میں دو سے تین بار';
     else if(kType === 'special') dose = 'حکیم کی ہدایت کے مطابق (اسپیشل بیماری کا نسخہ)';
-    else dose = (age === 'child' ? '250' : '500') + ' ملی گرام' + (form === 'goli' ? (age === 'child' ? ' (ایک گولی)' : ' (2 گولیاں)') : '') + ' — دن میں دو سے تین بار';
+    else { const kMg = age === 'child' ? 250 : 500; dose = `${kMg} ملی گرام (${pillCount(kMg)}) — دن میں دو سے تین بار`; }
   }
   const anupan = QM_T[t1].anupan;
   const eat = [...new Set([...QM_T[t3].d1, ...QM_T[t1].d1])];
@@ -4807,7 +4799,7 @@ function qmBuild(){
       ${kushtaRows.map(r=>`<tr><td style="${th}${r.toxic?' color:#e0524f;':''}">${escapeHtmlSearch(r.name)} <span style="color:var(--muted); font-size:.75rem;">(کشتہ)</span></td><td style="text-align:center; ${th}">${r.per}</td></tr>`).join('')}
     </table>
     ${powerHtml}
-    <p><b style="color:var(--gold-soft);">ترکیب:</b> ${form === 'goli' ? 'سب کو باریک پیس کر پانی کی مدد سے 250 ملی گرام (چنے کے برابر) کی گولیاں بنا لیں۔' : 'سب کو باریک پیس کر سفوف بنا لیں اور بند ڈبے میں رکھیں۔'}</p>
+    <p><b style="color:var(--gold-soft);">ترکیب:</b> سب کو باریک پیس کر پانی کی مدد سے ${QM_PILL_MG} ملی گرام (چنے کے برابر) کی گولیاں بنا لیں۔</p>
     <p><b style="color:var(--gold-soft);">خوراک:</b> ${dose}، ${anupan}۔</p>
     <p><b style="color:var(--gold-soft);">غذا (کھائیں):</b> ${eat.join('، ')}</p>
     <p><b style="color:var(--gold-soft);">پرہیز:</b> ${avoid.join('، ')} — یعنی مرض والی ${QM_T[t].name} غذائیں۔</p>
