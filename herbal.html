@@ -3938,6 +3938,15 @@ function qmFaideBarHtml(h, item){
   const title = cited ? 'کتاب تحریک امراض اور علاج کے حوالہ شدہ صفحے میں بھی یہی فائدہ درج ہے' : 'صرف عام یونانی معلومات سے — کسی حوالہ شدہ صفحے میں یہ فائدہ نہیں ملا';
   return `<span title="${escapeHtmlSearch(title)}" style="display:inline-block; vertical-align:middle; height:5px; border-radius:3px; margin-right:6px; background:${cited ? 'var(--gold)' : 'var(--border)'}; width:${cited ? '34px' : '16px'};"></span>`;
 }
+// بوٹیوں کی فہرست کو درجہ (1 غذائی/نرم → 2 عام → 3 تیز → 4 زہریلی) کے حساب سے الگ الگ گروپوں میں دکھائیں
+const QM_DARJA_GROUP_LABEL = { 1:'درجہ 1 — غذائی/نرم', 2:'درجہ 2 — عام دوا', 3:'درجہ 3 — تیز دوا', 4:'درجہ 4 — زہریلی' };
+function qmGroupedHerbRows(list, rowFn){
+  const groups = { 1:[], 2:[], 3:[], 4:[] };
+  list.forEach(h=> groups[qmHerbLevel(h)].push(h));
+  return [1,2,3,4].filter(lvl=> groups[lvl].length).map(lvl=>
+    `<div style="color:var(--gold-soft); font-size:.78rem; margin-top:8px; border-top:1px dotted var(--border); padding-top:6px;">${QM_DARJA_GROUP_LABEL[lvl]}</div>${groups[lvl].map(rowFn).join('')}`
+  ).join('');
+}
 function qmHerbRow(h, checked, why, k){
   const faideList = String(h.f || '').split('،').map(x=> x.trim()).filter(Boolean);
   const faideHtml = faideList.map(x=> `<div>${qmFaideBarHtml(h, x)}${escapeHtmlSearch(x)}</div>`).join('');
@@ -4664,15 +4673,15 @@ function qmRenderHerbs(aiChosen){
   const prevStatus = (document.getElementById('qmAiStatus') || {}).innerHTML || '';
   step2.innerHTML = `${qmOrganOnlyHint(dName)}<p id="qmAiStatus" style="color:var(--gold-soft); font-size:.8rem; margin-bottom:6px;">${aiChosen ? '🤖 کتابوں اور طب یونانی کے مطابق AI کا تیار کردہ نسخہ' : prevStatus}</p><p style="color:var(--gold); font-size:.95rem; margin-bottom:8px;">🌿 ${text ? `"${escapeHtmlSearch(dName)}" کے لیے ` : ''}نسخے کے اجزاء:</p>
     <div style="border:1px solid var(--border); border-right:4px solid var(--gold); border-radius:10px; padding:10px 12px; margin-bottom:12px;">
-      ${disH.length ? `<div style="color:var(--gold-soft); font-size:.82rem;">مرض کے لیے</div>${disH.map(h=> qmHerbRow(h, true, h.why, h.k)).join('')}` : (window.qmAiBusy) ? `<p style="color:var(--gold-soft); font-size:.85rem;">⏳ ابھی انتظار کریں — جڑی بوٹیاں چنی جا رہی ہیں...</p>` : (herbalChosenCause('qm', dName) ? `<p style="color:#e0524f; font-size:.85rem;">"${escapeHtmlSearch(herbalChosenCause('qm', dName).cause)}" کے لیے فہرست میں کوئی خاص بوٹی نہیں ملی — نیچے "دوسری جڑی بوٹیاں" میں سے منتخب کریں۔</p>` : `<p style="color:#e0524f; font-size:.85rem;">اس نام سے مرض کی کوئی خاص بوٹی نہیں ملی — مرض کا پورا نام لکھیں (مثلاً "${escapeHtmlSearch(dName)} میں درد" یا "${escapeHtmlSearch(dName)} کی کمزوری")۔</p>`)}
-      ${supH.length ? `<div style="color:var(--gold-soft); font-size:.82rem; margin-top:10px; border-top:1px dashed var(--border); padding-top:8px;">ساتھ میں (طاقت، ہاضمہ، جراثیم کش)</div>${supH.map(h=> qmHerbRow(h, disH.length > 0, h.why, h.k)).join('')}` : ''}
+      ${disH.length ? `<div style="color:var(--gold-soft); font-size:.82rem;">مرض کے لیے</div>${qmGroupedHerbRows(disH, h=> qmHerbRow(h, true, h.why, h.k))}` : (window.qmAiBusy) ? `<p style="color:var(--gold-soft); font-size:.85rem;">⏳ ابھی انتظار کریں — جڑی بوٹیاں چنی جا رہی ہیں...</p>` : (herbalChosenCause('qm', dName) ? `<p style="color:#e0524f; font-size:.85rem;">"${escapeHtmlSearch(herbalChosenCause('qm', dName).cause)}" کے لیے فہرست میں کوئی خاص بوٹی نہیں ملی — نیچے "دوسری جڑی بوٹیاں" میں سے منتخب کریں۔</p>` : `<p style="color:#e0524f; font-size:.85rem;">اس نام سے مرض کی کوئی خاص بوٹی نہیں ملی — مرض کا پورا نام لکھیں (مثلاً "${escapeHtmlSearch(dName)} میں درد" یا "${escapeHtmlSearch(dName)} کی کمزوری")۔</p>`)}
+      ${supH.length ? `<div style="color:var(--gold-soft); font-size:.82rem; margin-top:10px; border-top:1px dashed var(--border); padding-top:8px;">ساتھ میں (طاقت، ہاضمہ، جراثیم کش)</div>${qmGroupedHerbRows(supH, h=> qmHerbRow(h, disH.length > 0, h.why, h.k))}` : ''}
       <details style="margin-top:8px;">
         <summary style="cursor:pointer; color:var(--gold-soft); font-size:.8rem;">دوسری جڑی بوٹیاں (${others.length})</summary>
-        <div style="margin-top:6px;">${others.map(h=> qmHerbRow(h, false, '', kOf(h))).join('')}</div>
+        <div style="margin-top:6px;">${qmGroupedHerbRows(others, h=> qmHerbRow(h, false, '', kOf(h)))}</div>
       </details>
       <details style="margin-top:4px;">
         <summary style="cursor:pointer; color:var(--gold-soft); font-size:.8rem;">تمام جڑی بوٹیاں — تمام مزاج (${allOthers.length}) — جو مرضی خود شامل کریں</summary>
-        <div style="margin-top:6px;">${allOthers.map(h=> qmHerbRow(h, false, '', kOf(h))).join('')}</div>
+        <div style="margin-top:6px;">${qmGroupedHerbRows(allOthers, h=> qmHerbRow(h, false, '', kOf(h)))}</div>
       </details>
     </div>
     ${qmKushtaSuggestHtml(t, organT, text, 100, document.getElementById('qmAge').value)}
