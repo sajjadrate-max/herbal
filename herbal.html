@@ -612,6 +612,17 @@ function toggleKamiOrganPanel(organKey){
   panel.style.display = isOpen ? 'none' : 'block';
   if(arrow) arrow.textContent = isOpen ? '▾' : '▴';
 }
+// جب کسی عضو کا پینل بند (collapse) ہو تو اس میں منتخب کردہ علامات ہی نظر آئیں — باقی چھپ جائیں
+function updateKamiOrganSummary(organKey){
+  const panel = document.getElementById(`kami-organ-panel-${organKey}`);
+  if(!panel) return;
+  const names = Array.from(panel.querySelectorAll('input:checked')).map(c=> c.value);
+  const summaryEl = document.getElementById(`kami-organ-summary-${organKey}`);
+  if(summaryEl){
+    summaryEl.textContent = names.join('، ');
+    summaryEl.style.display = names.length ? 'block' : 'none';
+  }
+}
 function qmDeficiencyInit(){
   const el = document.getElementById('deficiencySymptomList');
   if(!el || el.dataset.ready) return;
@@ -624,12 +635,14 @@ function qmDeficiencyInit(){
   }));
   let i = 0;
   el.innerHTML = QM_DEFICIENCY_ORGAN_ORDER.filter(o=> byOrgan[o] && byOrgan[o].length).map(organ=>{
-    const rows = byOrgan[organ].map(s=>{ const id = i++; return `<label class="symptom" id="defWrap-${id}"><input type="checkbox" id="def-${id}" value="${escapeHtmlSearch(s)}" onchange="document.getElementById('defWrap-${id}').classList.toggle('checked', this.checked)"><span>${escapeHtmlSearch(s)}</span></label>`; }).join('');
+    const safe = escapeHtmlSearch(organ);
+    const rows = byOrgan[organ].map(s=>{ const id = i++; return `<label class="symptom" id="defWrap-${id}"><input type="checkbox" id="def-${id}" value="${escapeHtmlSearch(s)}" onchange="document.getElementById('defWrap-${id}').classList.toggle('checked', this.checked); updateKamiOrganSummary('${escapeJsAttr(organ)}')"><span>${escapeHtmlSearch(s)}</span></label>`; }).join('');
     return `<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
       <div onclick="toggleKamiOrganPanel('${escapeJsAttr(organ)}')" style="padding:14px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; color:var(--gold); font-weight:700;">
-        <span>${escapeHtmlSearch(organ)}</span><span id="kami-organ-arrow-${escapeHtmlSearch(organ)}">▾</span>
+        <span>${safe}</span><span id="kami-organ-arrow-${safe}">▾</span>
       </div>
-      <div id="kami-organ-panel-${escapeHtmlSearch(organ)}" style="display:none; padding:10px 12px 14px; border-top:1px solid var(--border);">
+      <div id="kami-organ-summary-${safe}" style="display:none; padding:0 16px 12px; color:var(--text); font-size:.9rem;"></div>
+      <div id="kami-organ-panel-${safe}" style="display:none; padding:10px 12px 14px; border-top:1px solid var(--border);">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">${rows}</div>
       </div>
     </div>`;
