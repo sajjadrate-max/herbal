@@ -675,16 +675,22 @@ function qmDeficiencyInit(){
   const el = document.getElementById('deficiencySymptomList');
   if(!el || el.dataset.ready) return;
   el.dataset.ready = '1';
+  const shortDefName = n => n.replace(/^وٹامن\s*/, '').replace(/\s*\([^)]*\)$/, '').trim();
   const seen = new Set();
   const byOrgan = {};
-  QM_DEFICIENCY_DATA.forEach(d=> d.symptoms.forEach(s=>{
-    if(seen.has(s.t)) return; seen.add(s.t);
-    (byOrgan[s.o] = byOrgan[s.o] || []).push(s.t);
-  }));
+  const symptomTags = {};
+  QM_DEFICIENCY_DATA.forEach(d=>{
+    const tag = shortDefName(d.name);
+    d.symptoms.forEach(s=>{
+      (symptomTags[s.t] = symptomTags[s.t] || []).push(tag);
+      if(seen.has(s.t)) return; seen.add(s.t);
+      (byOrgan[s.o] = byOrgan[s.o] || []).push(s.t);
+    });
+  });
   let i = 0;
   el.innerHTML = QM_DEFICIENCY_ORGAN_ORDER.filter(o=> byOrgan[o] && byOrgan[o].length).map(organ=>{
     const safe = escapeHtmlSearch(organ);
-    const rows = byOrgan[organ].map(s=>{ const id = i++; return `<label class="symptom" id="defWrap-${id}"><input type="checkbox" id="def-${id}" value="${escapeHtmlSearch(s)}" onchange="document.getElementById('defWrap-${id}').classList.toggle('checked', this.checked); updateKamiOrganSummary('${escapeJsAttr(organ)}')"><span>${escapeHtmlSearch(s)}</span></label>`; }).join('');
+    const rows = byOrgan[organ].map(s=>{ const id = i++; const tagText = (symptomTags[s] || []).join('، '); return `<label class="symptom" id="defWrap-${id}"><input type="checkbox" id="def-${id}" value="${escapeHtmlSearch(s)}" onchange="document.getElementById('defWrap-${id}').classList.toggle('checked', this.checked); updateKamiOrganSummary('${escapeJsAttr(organ)}')"><span>${escapeHtmlSearch(s)} <small style="color:var(--muted); font-size:.68rem;">(${escapeHtmlSearch(tagText)})</small></span></label>`; }).join('');
     return `<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
       <div onclick="toggleKamiOrganPanel('${escapeJsAttr(organ)}')" style="padding:14px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; color:var(--gold); font-weight:700;">
         <span>${safe}</span><span id="kami-organ-arrow-${safe}">▾</span>
