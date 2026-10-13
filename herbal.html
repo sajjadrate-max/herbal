@@ -279,6 +279,16 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
     <div class="meal-card"><h3>شام کا کھانا</h3><p>پودینہ، کالی مرچ، زیرہ سفید، ادرک، لہسن، نمک مناسب مقدار میں ڈال کر چٹنی بنائیں اور گھی میں فرائی کر کے دن میں ایک بار ضرور استعمال کریں، یا اخروٹ ایک دانہ، پستہ چار دانے، بادام پانچ دانے، خشک خوبانی اور کھجور چار عدد کوٹ کر دودھ میں ابال کر پیئیں۔</p></div>
     <div class="meal-card qahwa"><h3>قہوہ کی ترکیب</h3><p>اجوائن دیسی دو چٹکی، پودینہ دس پتی یا ادرک چھوٹا ٹکڑا، گڑ — ان سب کو تین منٹ پانی میں ابال کر پیئیں۔</p></div>
   </div>
+
+  <div class="result-card" id="deficiencyBox" style="margin-top:28px;">
+    <h3 style="color:var(--gold); text-align:center; margin-bottom:8px;">🩺 علامات سے وٹامنز/معدنیات کی کمی کا اندازہ</h3>
+    <div class="note">نیچے جو علامات آپ کو ہوں وہ منتخب کریں — جتنی زیادہ علامات منتخب ہوں گی اندازہ اتنا ہی بہتر ہوگا۔ <b>یہ صرف ایک امکان بتاتا ہے، پکی تشخیص نہیں</b> — یقینی طور پر جاننے کے لیے بلڈ ٹیسٹ کروائیں۔</div>
+    <div id="deficiencySymptomList" class="symptom-grid" style="margin:12px 0;"></div>
+    <div style="text-align:center; margin-top:10px;">
+      <button class="btn" onclick="qmDeficiencyDiagnose()" style="border-radius:20px;">تشخیص کریں</button>
+    </div>
+    <div id="deficiencyResult" style="margin-top:16px;"></div>
+  </div>
 </section>
 
 <!-- ===================== NUSKHE (MEDICINES REFERENCE) ===================== -->
@@ -566,6 +576,56 @@ function showMizaj(id, el){
   document.querySelectorAll('.mizaj-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
 }
+
+// ---------- وٹامنز/معدنیات کی کمی — علامات سے اندازہ (عمومی طبی معلومات، کسی خاص کتاب کا حوالہ نہیں) ----------
+// نوٹ: یہ صرف امکان بتاتا ہے — پکی تشخیص صرف بلڈ ٹیسٹ سے ہوتی ہے، صفحے پر بھی یہی لکھا ہے
+const QM_DEFICIENCY_DATA = [
+  { name:'وٹامن اے (Vitamin A)', symptoms:['رات کو دھندلا نظر آنا', 'آنکھوں کی خشکی', 'جلد کا خشک و کھردرا ہونا'], foods:['گاجر','پالک','کدو','آم','انڈے کی زردی','دودھ','میٹھا آلو'] },
+  { name:'وٹامن بی1 (تھایامین)', symptoms:['ہاتھ پاؤں میں جھنجھناہٹ یا سن ہونا', 'بھوک نہ لگنا', 'جسمانی کمزوری اور تھکاوٹ'], foods:['دالیں','مونگ پھلی','جو','بادام','سورج مکھی کے بیج','چوکر والا آٹا'] },
+  { name:'وٹامن بی2 (رائبوفلاوین)', symptoms:['ہونٹوں کے کونوں کا پھٹنا', 'زبان کی سوزش یا جلن', 'آنکھوں میں جلن یا لالی'], foods:['دودھ','دہی','انڈے','بادام','سبز پتوں والی سبزیاں','مشروم'] },
+  { name:'وٹامن بی3 (نیاسین)', symptoms:['دھوپ لگنے سے جلد پر دانے یا خارش', 'یادداشت کا کمزور ہونا', 'ہاضمہ خراب رہنا'], foods:['مرغی کا گوشت','مچھلی','مونگ پھلی','بھورے چاول','انڈے'] },
+  { name:'وٹامن بی6', symptoms:['ہونٹوں کے کونوں کا پھٹنا', 'چڑچڑاپن یا موڈ خراب رہنا', 'خون کی کمی'], foods:['کیلا','مرغی کا گوشت','چنے','آلو','پالک'] },
+  { name:'وٹامن بی7 (بایوٹن)', symptoms:['بالوں کا بہت زیادہ گرنا', 'ناخنوں کا کمزور ہو کر ٹوٹنا', 'جلد پر خارش یا دانے'], foods:['انڈے کی زردی','بادام','مونگ پھلی','دودھ','کیلا'] },
+  { name:'وٹامن بی9 (فولیٹ)', symptoms:['منہ میں چھالے', 'جسمانی کمزوری اور تھکاوٹ', 'خون کی کمی'], foods:['پالک','چنے','دالیں','مالٹا/کینو','چقندر'] },
+  { name:'وٹامن بی12', symptoms:['ہاتھ پاؤں میں جھنجھناہٹ یا سن ہونا', 'یادداشت کا کمزور ہونا', 'زبان کی سوزش یا جلن', 'چکر آنا یا سر گھومنا'], foods:['انڈے','دودھ','دہی','مرغی کا گوشت','مچھلی','گوشت (جگر)'] },
+  { name:'وٹامن سی', symptoms:['مسوڑھوں سے خون آنا', 'زخم کا دیر سے بھرنا', 'جلد کا خشک و کھردرا ہونا'], foods:['امرود','مالٹا/کینو','لیموں','ٹماٹر','آملہ','شملہ مرچ'] },
+  { name:'وٹامن ڈی', symptoms:['ہڈیوں اور جوڑوں کا درد', 'پٹھوں کی کمزوری', 'بچوں کی ٹانگوں کا ٹیڑھا ہونا'], foods:['دھوپ میں روزانہ کچھ دیر بیٹھنا','انڈے کی زردی','مچھلی','دودھ','مکھن'] },
+  { name:'وٹامن ای', symptoms:['پٹھوں کی کمزوری', 'نظر کا کمزور ہونا', 'جلد کا خشک و کھردرا ہونا'], foods:['بادام','سورج مکھی کے بیج','پالک','زیتون کا تیل'] },
+  { name:'وٹامن کے', symptoms:['زخم سے خون جلدی بند نہ ہونا', 'جسم پر آسانی سے نیل پڑنا'], foods:['پالک','بند گوبھی','بروکولی','سرسوں کا ساگ'] },
+  { name:'آئرن (فولاد)', symptoms:['چکر آنا یا سر گھومنا', 'سانس پھولنا', 'چہرے کا زرد پڑنا', 'بالوں کا بہت زیادہ گرنا', 'جسمانی کمزوری اور تھکاوٹ'], foods:['پالک','گڑ','چھوہارے','انار','گوشت (جگر)','چقندر'] },
+  { name:'کیلشیم', symptoms:['ہڈیوں اور جوڑوں کا درد', 'دانتوں کا کمزور ہونا', 'پٹھوں میں کھنچاؤ'], foods:['دودھ','دہی','پنیر','تل','بادام'] },
+  { name:'میگنیشیم', symptoms:['پٹھوں میں کھنچاؤ', 'نیند میں خلل یا بے خوابی', 'دل کی دھڑکن بے ترتیب محسوس ہونا'], foods:['بادام','کیلا','پالک','دالیں','مونگ پھلی'] },
+  { name:'زنک', symptoms:['زخم کا دیر سے بھرنا', 'ذائقہ یا سونگھنے کی حس کم ہونا', 'بالوں کا بہت زیادہ گرنا'], foods:['چنے','گوشت','انڈے','کدو کے بیج','دالیں'] },
+  { name:'پروٹین', symptoms:['پٹھوں کا کمزور ہونا', 'ہاتھ پاؤں پر سوجن', 'بالوں اور ناخنوں کا کمزور ہونا'], foods:['انڈے','دالیں','مرغی کا گوشت','دودھ/دہی','چنے','مچھلی'] }
+];
+function qmDeficiencyInit(){
+  const el = document.getElementById('deficiencySymptomList');
+  if(!el || el.dataset.ready) return;
+  el.dataset.ready = '1';
+  const seen = new Set();
+  const all = [];
+  QM_DEFICIENCY_DATA.forEach(d=> d.symptoms.forEach(s=>{ if(!seen.has(s)){ seen.add(s); all.push(s); } }));
+  el.innerHTML = all.map((s, i)=> `<label class="symptom" id="defWrap-${i}"><input type="checkbox" id="def-${i}" value="${escapeHtmlSearch(s)}" onchange="document.getElementById('defWrap-${i}').classList.toggle('checked', this.checked)"><span>${escapeHtmlSearch(s)}</span></label>`).join('');
+}
+function qmDeficiencyDiagnose(){
+  const checked = new Set(Array.from(document.querySelectorAll('#deficiencySymptomList input:checked')).map(c=> c.value));
+  const out = document.getElementById('deficiencyResult');
+  if(!checked.size){ out.innerHTML = '<p style="color:#e0524f; text-align:center;">پہلے کم از کم ایک علامت منتخب کریں۔</p>'; return; }
+  const matches = QM_DEFICIENCY_DATA.map(d=>{
+    const hit = d.symptoms.filter(s=> checked.has(s));
+    return { d, hit, pct: Math.round(hit.length * 100 / d.symptoms.length) };
+  }).filter(x=> x.hit.length > 0).sort((a,b)=> (b.hit.length - a.hit.length) || (b.pct - a.pct));
+  if(!matches.length){ out.innerHTML = '<p style="color:var(--muted); text-align:center;">منتخب علامات سے کسی خاص کمی کا امکان ظاہر نہیں ہوتا۔</p>'; return; }
+  out.innerHTML = matches.map(({d, hit, pct})=> `
+    <div class="mujarrab-card" style="margin-bottom:14px;">
+      <h4 style="color:var(--gold); margin-bottom:6px;">${escapeHtmlSearch(d.name)} <span style="color:var(--gold-soft); font-size:.78rem;">(${hit.length} میں سے ${d.symptoms.length} علامات ملیں — ${pct}%)</span></h4>
+      <p style="font-size:.85rem; color:var(--muted); margin-bottom:8px;">ملنے والی علامات: ${hit.map(escapeHtmlSearch).join('، ')}</p>
+      <p style="font-size:.9rem;"><b style="color:var(--gold-soft);">یہ کمی پوری کرنے کے لیے غذائیں:</b> ${d.foods.map(escapeHtmlSearch).join('، ')}</p>
+    </div>`).join('') +
+    '<p style="color:var(--muted); font-size:.78rem; text-align:center; margin-top:4px;">یہ صرف علامات کی بنیاد پر امکان ہے، پکی تشخیص نہیں — یقین کے لیے بلڈ ٹیسٹ کروائیں۔</p>';
+}
+document.addEventListener('DOMContentLoaded', qmDeficiencyInit);
+setTimeout(qmDeficiencyInit, 0);
 
 // ---------- DIAGNOSTIC QUESTIONS (each: title + 3 boxes, single-select) ----------
 const criteria = [
