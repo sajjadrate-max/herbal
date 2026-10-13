@@ -287,7 +287,7 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
   <h2 class="section-title">🩺 علامات سے وٹامنز/معدنیات کی کمی کا اندازہ</h2>
   <div class="result-card" id="deficiencyBox">
     <div class="note">نیچے جو علامات آپ کو ہوں وہ منتخب کریں — جتنی زیادہ علامات منتخب ہوں گی اندازہ اتنا ہی بہتر ہوگا۔ <b>یہ صرف ایک امکان بتاتا ہے، پکی تشخیص نہیں</b> — یقینی طور پر جاننے کے لیے بلڈ ٹیسٹ کروائیں۔</div>
-    <div id="deficiencySymptomList" class="symptom-grid" style="margin:12px 0;"></div>
+    <div id="deficiencySymptomList" style="display:flex; flex-direction:column; gap:8px; margin:12px 0;"></div>
     <div style="text-align:center; margin-top:10px;">
       <button class="btn" onclick="qmDeficiencyDiagnose()" style="border-radius:20px;">تشخیص کریں</button>
     </div>
@@ -605,6 +605,13 @@ const QM_DEFICIENCY_DATA = [
 ];
 // سائٹ کی اپنی عضو فہرست کی ترتیب (diseaseList سے) — اسی ترتیب میں علامات بھی دکھائی جائیں
 const QM_DEFICIENCY_ORGAN_ORDER = ['سر','آنکھ','کان','ناک','ہونٹ','منہ و زبان','دانت و مسوڑھے','گلا','پھیپھڑے و دمہ','دل','معدہ','جوڑ، ہڈیاں و پٹھے','جلد، بال و ناخن','عمومی/پورے جسم کی بیماریاں'];
+function toggleKamiOrganPanel(organKey){
+  const panel = document.getElementById(`kami-organ-panel-${organKey}`);
+  const arrow = document.getElementById(`kami-organ-arrow-${organKey}`);
+  const isOpen = panel.style.display === 'block';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if(arrow) arrow.textContent = isOpen ? '▾' : '▴';
+}
 function qmDeficiencyInit(){
   const el = document.getElementById('deficiencySymptomList');
   if(!el || el.dataset.ready) return;
@@ -616,10 +623,17 @@ function qmDeficiencyInit(){
     (byOrgan[s.o] = byOrgan[s.o] || []).push(s.t);
   }));
   let i = 0;
-  el.innerHTML = QM_DEFICIENCY_ORGAN_ORDER.filter(o=> byOrgan[o] && byOrgan[o].length).map(organ=>
-    `<div style="grid-column:1/-1; color:var(--gold-soft); font-size:.8rem; margin-top:10px; border-top:1px dashed var(--border); padding-top:6px;">${escapeHtmlSearch(organ)}</div>` +
-    byOrgan[organ].map(s=>{ const id = i++; return `<label class="symptom" id="defWrap-${id}"><input type="checkbox" id="def-${id}" value="${escapeHtmlSearch(s)}" onchange="document.getElementById('defWrap-${id}').classList.toggle('checked', this.checked)"><span>${escapeHtmlSearch(s)}</span></label>`; }).join('')
-  ).join('');
+  el.innerHTML = QM_DEFICIENCY_ORGAN_ORDER.filter(o=> byOrgan[o] && byOrgan[o].length).map(organ=>{
+    const rows = byOrgan[organ].map(s=>{ const id = i++; return `<label class="symptom" id="defWrap-${id}"><input type="checkbox" id="def-${id}" value="${escapeHtmlSearch(s)}" onchange="document.getElementById('defWrap-${id}').classList.toggle('checked', this.checked)"><span>${escapeHtmlSearch(s)}</span></label>`; }).join('');
+    return `<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+      <div onclick="toggleKamiOrganPanel('${escapeJsAttr(organ)}')" style="padding:14px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; color:var(--gold); font-weight:700;">
+        <span>${escapeHtmlSearch(organ)}</span><span id="kami-organ-arrow-${escapeHtmlSearch(organ)}">▾</span>
+      </div>
+      <div id="kami-organ-panel-${escapeHtmlSearch(organ)}" style="display:none; padding:10px 12px 14px; border-top:1px solid var(--border);">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">${rows}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 function qmDeficiencyDiagnose(){
   const checked = new Set(Array.from(document.querySelectorAll('#deficiencySymptomList input:checked')).map(c=> c.value));
