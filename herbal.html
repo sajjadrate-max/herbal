@@ -757,9 +757,9 @@ const QM_CAUSE_TYPES = [
   { name:'انفیکشن (جراثیم)', examples:['ٹائیفائیڈ','ٹی بی','نمونیا','پیشاب کا انفیکشن','نزلہ','فلو','ڈینگی','ہیپاٹائٹس','داد','خارش','منہ کی پھپھوندی','ملیریا','پیٹ کے کیڑے'], desc:'بیماری جسم کے باہر سے آئے جراثیم — بیکٹیریا، وائرس، فنگس یا کیڑے/طفیلی — سے ہوتی ہے۔', treatment:'بیکٹیریا کے لیے اینٹی بائیوٹک، وائرس میں عموماً آرام اور علامات کا علاج (کچھ میں اینٹی وائرل دوا)، فنگس کے لیے اینٹی فنگل، اور کیڑوں/طفیلی کے لیے مخصوص دوا۔', action:'ڈاکٹر سے فوری رجوع کریں — خود دوا نہ لیں، خصوصاً اینٹی بائیوٹک بغیر تجویز کے ہرگز نہ کھائیں۔' },
   { name:'سوزش (Inflammation)', examples:['گٹھیا','جوڑوں کا درد','معدے کی سوزش','دمہ','الرجی'], desc:'جسم کا اپنا دفاعی نظام کسی حصے میں سوجن، درد اور گرمی پیدا کر دیتا ہے۔', treatment:'درد کم کرنے والی دوائیں، سٹیرائیڈ اور الرجی کی دوائیں۔', action:'ڈاکٹر سے ملیں — ساتھ ہی سائٹ کا "نسخہ سازی" ٹول مزاج کے مطابق جڑی بوٹیوں سے معاون علاج کے لیے بھی دیکھا جا سکتا ہے۔' },
   { name:'خود مدافعتی بیماریاں (Autoimmune)', examples:['ریومیٹائیڈ آرتھرائٹس','لوپس','ٹائپ 1 شوگر'], desc:'جسم کا دفاعی نظام غلطی سے اپنے ہی اعضاء پر حملہ کرتا ہے۔', treatment:'دفاعی نظام کو قابو میں کرنے والی دوائیں۔', action:'ماہر ڈاکٹر کی مستقل نگرانی ضروری ہے — یہ خود علاج کرنے والی بیماری نہیں۔' },
-  { name:'رکاوٹ (Obstruction)', examples:['پتھری','گردے کی پتھری','پتے کی پتھری','ہارٹ اٹیک','آنتوں کی رکاوٹ','پیشاب کی رکاوٹ'], desc:'کسی نالی یا راستے کا بند ہو جانا۔', treatment:'رکاوٹ ہٹائی جاتی ہے — آپریشن، سٹنٹ، پتھری توڑنا یا دوا سے نالی کھولنا۔', action:'فوری ڈاکٹر/ہسپتال سے رجوع کریں، خاص طور پر ہارٹ اٹیک کی علامات میں بالکل دیر نہ کریں۔' },
-  { name:'عضو کی خرابی (Organ Failure)', examples:['گردے فیل','جگر کی خرابی','دل کا کمزور ہونا','فالج'], desc:'کوئی عضو ٹھیک کام نہیں کرتا۔', treatment:'عضو کو سہارا دینے والی دوائیں، ڈائلیسز، اور بعض صورتوں میں پیوندکاری۔', action:'فوری ماہر ڈاکٹر سے رجوع کریں۔' },
-  { name:'رسولی اور کینسر', examples:['کینسر','رسولی','ٹیومر'], desc:'خلیے بے قابو ہو کر بڑھنے لگتے ہیں۔', treatment:'آپریشن، کیموتھراپی اور شعاعوں سے علاج۔', action:'فوری ماہر کینسر ڈاکٹر (آنکولوجسٹ) سے رجوع کریں۔' },
+  { name:'رکاوٹ (Obstruction)', examples:['پتھری','گردے کی پتھری','پتے کی پتھری','ہارٹ اٹیک','آنتوں کی رکاوٹ','پیشاب کی رکاوٹ'], desc:'کسی نالی یا راستے کا بند ہو جانا — جیسے ہارٹ اٹیک میں دل کی شریان۔', emergency:true },
+  { name:'عضو کی خرابی (Organ Failure)', examples:['گردے فیل','جگر کی خرابی','دل کا کمزور ہونا','فالج'], desc:'کوئی عضو ٹھیک کام نہیں کرتا — فالج بھی اسی میں شامل ہے۔', emergency:true },
+  { name:'رسولی اور کینسر', examples:['کینسر','رسولی','ٹیومر'], desc:'خلیے بے قابو ہو کر بڑھنے لگتے ہیں۔', emergency:true },
   { name:'چوٹ اور حادثہ', examples:['ہڈی ٹوٹنا','زخم','جل جانا','موچ'], desc:'ہڈی ٹوٹنا، زخم، جلنا یا موچ۔', treatment:'پلستر، ٹانکے، مرہم پٹی اور آپریشن۔', action:'ڈاکٹر/ہسپتال سے رجوع کریں۔' },
   { name:'موروثی بیماریاں', examples:['تھیلیسیمیا','ہیموفیلیا'], desc:'والدین سے منتقل ہوتی ہیں۔', treatment:'علاج عموماً ساری زندگی چلتا ہے، جیسے خون لگوانا۔', action:'ماہر ڈاکٹر کی مستقل نگرانی ضروری ہے۔' },
   { name:'طرزِ زندگی کی بیماریاں', examples:['ہائی بلڈ پریشر','بلند فشار خون','ٹائپ 2 شوگر','ذیابیطس','موٹاپا','کولیسٹرول'], desc:'غلط خوراک، ورزش نہ کرنے اور سگریٹ نوشی سے ہوتی ہیں۔', treatment:'دوا کے ساتھ ساتھ خوراک اور عادات بدلنا ضروری۔', action:'ڈاکٹر سے ملیں — ساتھ ہی سائٹ کا "غذائی چارٹ" اور "نسخہ سازی" ٹول بھی معاون ثابت ہو سکتا ہے۔' },
@@ -773,18 +773,25 @@ const QM_LAB_EXTRA = [
   { name:'پروٹین', items:'البیومن', symptoms:'غذائی کمی یا جگر اور گردے کی بیماری میں کم ہو جاتا ہے', note:'اگر البیومن جگر/گردے کی بیماری کی وجہ سے کم ہو تو صرف غذا سے پورا نہیں ہوتا — اصل بیماری کا علاج ضروری ہے۔' },
   { name:'پانی کی کمی (Dehydration)', items:'-', symptoms:'گرمی، دست اور بخار میں پانی کی کمی ہو جاتی ہے', note:'ہلکی کمی میں ORS/پانی کافی ہوتا ہے، شدید کمی میں ڈرپ لگا کر پوری کی جاتی ہے۔' }
 ];
+// خطرناک/ایمرجنسی اقسام (c.emergency) کے لیے علاج کا طریقہ نہیں بتایا جاتا — صرف فوری ڈاکٹر سے رجوع کرنے کی تاکید، تاکہ غلط دوا یا تاخیر کا خطرہ نہ ہو
+function qmCauseTreatmentHtml(c){
+  if(c.emergency){
+    return `<p style="font-size:.9rem; margin-top:8px; color:#e0524f; font-weight:700;">🚨 یہ ایمرجنسی نوعیت کی بیماری ہے — فوری طور پر ڈاکٹر یا ہسپتال سے رجوع کریں۔ گھر پر خود علاج کرنے یا دیر کرنے کی کوشش نہ کریں، غلط دوا یا تاخیر جان لیوا ثابت ہو سکتی ہے۔</p>`;
+  }
+  return `<p style="font-size:.88rem; margin-top:8px;"><b style="color:var(--gold-soft);">علاج کا اصول:</b> ${escapeHtmlSearch(c.treatment)}</p>
+    <p style="font-size:.88rem; margin-top:8px; color:var(--gold-soft);">⚠ ${escapeHtmlSearch(c.action)}</p>`;
+}
 function qmWajahInit(){
   const el = document.getElementById('wajahCauseList');
   if(el && !el.dataset.ready){
     el.dataset.ready = '1';
     el.innerHTML = QM_CAUSE_TYPES.map(c=> `
-      <details style="background:var(--card); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; padding:4px 16px;">
-        <summary style="cursor:pointer; padding:10px 0; color:var(--gold); font-weight:700;">${escapeHtmlSearch(c.name)}</summary>
+      <details style="background:var(--card); border:1px solid ${c.emergency ? '#e0524f' : 'var(--border)'}; border-radius:10px; margin-bottom:10px; padding:4px 16px;">
+        <summary style="cursor:pointer; padding:10px 0; color:${c.emergency ? '#e0524f' : 'var(--gold)'}; font-weight:700;">${c.emergency ? '🚨 ' : ''}${escapeHtmlSearch(c.name)}</summary>
         <div style="padding:6px 0 14px;">
           <p style="font-size:.9rem; color:var(--muted);">${escapeHtmlSearch(c.desc)}</p>
           <p style="font-size:.88rem; margin-top:8px;"><b style="color:var(--gold-soft);">مثالیں:</b> ${c.examples.map(e=>escapeHtmlSearch(e)).join('، ')}</p>
-          <p style="font-size:.88rem; margin-top:8px;"><b style="color:var(--gold-soft);">علاج کا اصول:</b> ${escapeHtmlSearch(c.treatment)}</p>
-          <p style="font-size:.88rem; margin-top:8px; color:var(--gold-soft);">⚠ ${escapeHtmlSearch(c.action)}</p>
+          ${qmCauseTreatmentHtml(c)}
         </div>
       </details>`).join('');
   }
@@ -814,11 +821,10 @@ function qmWajahSearch(){
     return;
   }
   let html = causeMatches.map(c=> `
-    <div class="mujarrab-card">
-      <h4 style="color:var(--gold); margin-bottom:6px;">${escapeHtmlSearch(c.name)}</h4>
+    <div class="mujarrab-card" style="${c.emergency ? 'border-right-color:#e0524f;' : ''}">
+      <h4 style="color:${c.emergency ? '#e0524f' : 'var(--gold)'}; margin-bottom:6px;">${c.emergency ? '🚨 ' : ''}${escapeHtmlSearch(c.name)}</h4>
       <p style="font-size:.85rem; color:var(--muted); margin-bottom:8px;">${escapeHtmlSearch(c.desc)}</p>
-      <p style="font-size:.88rem;"><b style="color:var(--gold-soft);">علاج کا اصول:</b> ${escapeHtmlSearch(c.treatment)}</p>
-      <p style="font-size:.88rem; margin-top:6px; color:var(--gold-soft);">⚠ ${escapeHtmlSearch(c.action)}</p>
+      ${qmCauseTreatmentHtml(c)}
     </div>`).join('');
   if(defMatches.length){
     html += `<div class="mujarrab-card">
