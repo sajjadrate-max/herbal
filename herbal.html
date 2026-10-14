@@ -144,6 +144,7 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
     <a onclick="showPage('naskhesaz')" id="nav-naskhesaz">نسخہ سازی</a>
     <a onclick="showPage('pdfmulti')" id="nav-pdfmulti">بیماری کی تلاش</a>
     <a onclick="showPage('kami')" id="nav-kami">وٹامنز/معدنیات کی تشخیص</a>
+    <a onclick="showPage('wajah')" id="nav-wajah">بیماری کی وجہ معلوم کریں</a>
   </nav>
 </header>
 
@@ -293,6 +294,28 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
     </div>
     <div id="deficiencyResult" style="margin-top:16px;"></div>
   </div>
+</section>
+
+<!-- ===================== DISEASE CAUSE-TYPE FINDER (DOCTOR'S CLASSIFICATION) ===================== -->
+<section class="page-section" id="page-wajah">
+  <h2 class="section-title">🩺 بیماری کی وجہ معلوم کریں</h2>
+  <div class="note">ہر بیماری کمی کی وجہ سے نہیں ہوتی۔ ڈاکٹر پہلے بیماری کی اصل وجہ معلوم کرتے ہیں — انفیکشن، سوزش، خود مدافعتی، رکاوٹ، عضو کی خرابی، رسولی، چوٹ، موروثی، طرزِ زندگی، ذہنی یا کمی — کمی ان میں سے صرف ایک قسم ہے، اور اس کا علاج تب ہی کیا جاتا ہے جب ٹیسٹ میں کمی ثابت ہو جائے۔ جدید طب کا اصول ہے: "پہلے وجہ معلوم کرو، پھر علاج کرو"۔ <b>یہ صفحہ صرف معلومات کے لیے ہے، تشخیص یا علاج کا متبادل نہیں — صحیح تشخیص اور دوا کے لیے ہمیشہ ڈاکٹر سے رجوع کریں۔</b></div>
+
+  <div class="result-card">
+    <h3 style="color:var(--gold); text-align:center; margin-bottom:12px;">بیماری یا علامت لکھ کر تلاش کریں</h3>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+      <input type="text" id="wajahSearchInput" placeholder="مثلاً: ٹی بی، گٹھیا، ذیابیطس، ڈپریشن..." style="flex:1; min-width:200px; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--navy2); color:var(--text); font-family:inherit;">
+      <button class="btn" onclick="qmWajahSearch()" style="border-radius:20px;">تلاش کریں</button>
+    </div>
+    <div id="wajahSearchResult" style="margin-top:16px;"></div>
+  </div>
+
+  <h3 style="color:var(--gold); margin-top:24px;">بیماری کی وجہ کی اقسام (ڈاکٹر کا نظام)</h3>
+  <div id="wajahCauseList" style="margin-top:10px;"></div>
+
+  <h3 style="color:var(--gold); margin-top:24px;">ٹیسٹ سے معلوم ہونے والی دیگر کمی (نمکیات، خون، ہارمونز وغیرہ)</h3>
+  <div class="note" style="margin:10px 0;">وٹامنز اور معدنیات کی کمی دیکھنے کے لیے "وٹامنز/معدنیات کی تشخیص" بٹن استعمال کریں۔</div>
+  <div id="wajahLabList"></div>
 </section>
 
 <!-- ===================== NUSKHE (MEDICINES REFERENCE) ===================== -->
@@ -723,6 +746,87 @@ function qmDeficiencyDiagnose(){
 }
 document.addEventListener('DOMContentLoaded', qmDeficiencyInit);
 setTimeout(qmDeficiencyInit, 0);
+
+// ---------- DISEASE CAUSE-TYPE FINDER (ڈاکٹر بیماری کی وجہ کے مطابق جو اقسام دیکھتے ہیں) ----------
+// نوٹ: یہاں کوئی مخصوص دوا کا نام یا خوراک نہیں بتائی جاتی — صرف علاج کا عمومی اصول اور رہنمائی، تفصیلی علاج ہمیشہ ڈاکٹر سے
+const QM_CAUSE_TYPES = [
+  { name:'انفیکشن (جراثیم)', examples:['ٹائیفائیڈ','ٹی بی','نمونیا','پیشاب کا انفیکشن','نزلہ','فلو','ڈینگی','ہیپاٹائٹس','داد','خارش','منہ کی پھپھوندی','ملیریا','پیٹ کے کیڑے'], desc:'بیماری جسم کے باہر سے آئے جراثیم — بیکٹیریا، وائرس، فنگس یا کیڑے/طفیلی — سے ہوتی ہے۔', treatment:'بیکٹیریا کے لیے اینٹی بائیوٹک، وائرس میں عموماً آرام اور علامات کا علاج (کچھ میں اینٹی وائرل دوا)، فنگس کے لیے اینٹی فنگل، اور کیڑوں/طفیلی کے لیے مخصوص دوا۔', action:'ڈاکٹر سے فوری رجوع کریں — خود دوا نہ لیں، خصوصاً اینٹی بائیوٹک بغیر تجویز کے ہرگز نہ کھائیں۔' },
+  { name:'سوزش (Inflammation)', examples:['گٹھیا','جوڑوں کا درد','معدے کی سوزش','دمہ','الرجی'], desc:'جسم کا اپنا دفاعی نظام کسی حصے میں سوجن، درد اور گرمی پیدا کر دیتا ہے۔', treatment:'درد کم کرنے والی دوائیں، سٹیرائیڈ اور الرجی کی دوائیں۔', action:'ڈاکٹر سے ملیں — ساتھ ہی سائٹ کا "نسخہ سازی" ٹول مزاج کے مطابق جڑی بوٹیوں سے معاون علاج کے لیے بھی دیکھا جا سکتا ہے۔' },
+  { name:'خود مدافعتی بیماریاں (Autoimmune)', examples:['ریومیٹائیڈ آرتھرائٹس','لوپس','ٹائپ 1 شوگر'], desc:'جسم کا دفاعی نظام غلطی سے اپنے ہی اعضاء پر حملہ کرتا ہے۔', treatment:'دفاعی نظام کو قابو میں کرنے والی دوائیں۔', action:'ماہر ڈاکٹر کی مستقل نگرانی ضروری ہے — یہ خود علاج کرنے والی بیماری نہیں۔' },
+  { name:'رکاوٹ (Obstruction)', examples:['پتھری','گردے کی پتھری','پتے کی پتھری','ہارٹ اٹیک','آنتوں کی رکاوٹ','پیشاب کی رکاوٹ'], desc:'کسی نالی یا راستے کا بند ہو جانا۔', treatment:'رکاوٹ ہٹائی جاتی ہے — آپریشن، سٹنٹ، پتھری توڑنا یا دوا سے نالی کھولنا۔', action:'فوری ڈاکٹر/ہسپتال سے رجوع کریں، خاص طور پر ہارٹ اٹیک کی علامات میں بالکل دیر نہ کریں۔' },
+  { name:'عضو کی خرابی (Organ Failure)', examples:['گردے فیل','جگر کی خرابی','دل کا کمزور ہونا','فالج'], desc:'کوئی عضو ٹھیک کام نہیں کرتا۔', treatment:'عضو کو سہارا دینے والی دوائیں، ڈائلیسز، اور بعض صورتوں میں پیوندکاری۔', action:'فوری ماہر ڈاکٹر سے رجوع کریں۔' },
+  { name:'رسولی اور کینسر', examples:['کینسر','رسولی','ٹیومر'], desc:'خلیے بے قابو ہو کر بڑھنے لگتے ہیں۔', treatment:'آپریشن، کیموتھراپی اور شعاعوں سے علاج۔', action:'فوری ماہر کینسر ڈاکٹر (آنکولوجسٹ) سے رجوع کریں۔' },
+  { name:'چوٹ اور حادثہ', examples:['ہڈی ٹوٹنا','زخم','جل جانا','موچ'], desc:'ہڈی ٹوٹنا، زخم، جلنا یا موچ۔', treatment:'پلستر، ٹانکے، مرہم پٹی اور آپریشن۔', action:'ڈاکٹر/ہسپتال سے رجوع کریں۔' },
+  { name:'موروثی بیماریاں', examples:['تھیلیسیمیا','ہیموفیلیا'], desc:'والدین سے منتقل ہوتی ہیں۔', treatment:'علاج عموماً ساری زندگی چلتا ہے، جیسے خون لگوانا۔', action:'ماہر ڈاکٹر کی مستقل نگرانی ضروری ہے۔' },
+  { name:'طرزِ زندگی کی بیماریاں', examples:['ہائی بلڈ پریشر','بلند فشار خون','ٹائپ 2 شوگر','ذیابیطس','موٹاپا','کولیسٹرول'], desc:'غلط خوراک، ورزش نہ کرنے اور سگریٹ نوشی سے ہوتی ہیں۔', treatment:'دوا کے ساتھ ساتھ خوراک اور عادات بدلنا ضروری۔', action:'ڈاکٹر سے ملیں — ساتھ ہی سائٹ کا "غذائی چارٹ" اور "نسخہ سازی" ٹول بھی معاون ثابت ہو سکتا ہے۔' },
+  { name:'ذہنی و نفسیاتی بیماریاں', examples:['ڈپریشن','گھبراہٹ','بے خوابی','نیند نہ آنا'], desc:'ڈپریشن، گھبراہٹ اور نیند نہ آنا۔', treatment:'دوا اور کاؤنسلنگ سے علاج۔', action:'ماہر نفسیات یا ڈاکٹر سے رجوع کریں۔' },
+  { name:'کمی (Deficiency)', examples:['وٹامن کی کمی','منرل کی کمی','کمزوری'], desc:'جسم میں کسی وٹامن، منرل، ہارمون یا دیگر جزو کی کمی سے بیماری ہوتی ہے — یہ خون/پیشاب ٹیسٹ سے معلوم ہوتی ہے۔', treatment:'کمی پوری کرنے والی غذائیں یا ڈاکٹر کی تجویز کردہ سپلیمنٹ۔', action:'سائٹ کا "وٹامنز/معدنیات کی تشخیص" بٹن دیکھیں — یقینی تشخیص کے لیے ٹیسٹ کروائیں۔' }
+];
+const QM_LAB_EXTRA = [
+  { name:'نمکیات (الیکٹرولائٹس)', items:'سوڈیم، پوٹاشیم، کلورائیڈ', symptoms:'دست، الٹی، کمزوری، دل کی دھڑکن کی خرابی', note:'کمی عموماً دست/الٹی/بخار کے بعد ہوتی ہے — ہلکی کمی ORS یا نمکیات کے گھول سے پوری ہو سکتی ہے، شدید کمی میں ڈرپ لگائی جاتی ہے۔ پوٹاشیم کی خود درستگی خطرناک ہو سکتی ہے — ڈاکٹر کی نگرانی ضروری ہے۔' },
+  { name:'خون کے اجزاء', items:'ہیموگلوبن، پلیٹ لیٹس، سفید خلیے', symptoms:'ہیموگلوبن کم ہونے پر خون کی کمی، پلیٹ لیٹس کم ہونے پر ڈینگی وغیرہ کا شبہ، سفید خلیے قوتِ مدافعت ظاہر کرتے ہیں', note:'یہ عموماً مکمل خون کے ٹیسٹ (CBC) سے معلوم ہوتے ہیں۔' },
+  { name:'ہارمونز', items:'تھائیرائیڈ (TSH، T3، T4)، انسولین/شوگر (HbA1c)، ٹیسٹوسٹیرون/ایسٹروجن، کورٹیسول', symptoms:'تھائیرائیڈ کی کمی سے موٹاپا، سستی، بال گرنا؛ انسولین کی خرابی سے ذیابیطس؛ ٹیسٹوسٹیرون/ایسٹروجن کی کمی سے مردانہ/زنانہ کمزوری اور بانجھ پن؛ کورٹیسول کی کمی سے شدید کمزوری اور کم بلڈ پریشر', note:'ہارمونز کا علاج ہمیشہ ڈاکٹر کی تجویز اور خوراک کے مطابق ہونا چاہیے، خود سے ہارمون نہ لیں۔' },
+  { name:'پروٹین', items:'البیومن', symptoms:'غذائی کمی یا جگر اور گردے کی بیماری میں کم ہو جاتا ہے', note:'اگر البیومن جگر/گردے کی بیماری کی وجہ سے کم ہو تو صرف غذا سے پورا نہیں ہوتا — اصل بیماری کا علاج ضروری ہے۔' },
+  { name:'پانی کی کمی (Dehydration)', items:'-', symptoms:'گرمی، دست اور بخار میں پانی کی کمی ہو جاتی ہے', note:'ہلکی کمی میں ORS/پانی کافی ہوتا ہے، شدید کمی میں ڈرپ لگا کر پوری کی جاتی ہے۔' }
+];
+function qmWajahInit(){
+  const el = document.getElementById('wajahCauseList');
+  if(el && !el.dataset.ready){
+    el.dataset.ready = '1';
+    el.innerHTML = QM_CAUSE_TYPES.map(c=> `
+      <details style="background:var(--card); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; padding:4px 16px;">
+        <summary style="cursor:pointer; padding:10px 0; color:var(--gold); font-weight:700;">${escapeHtmlSearch(c.name)}</summary>
+        <div style="padding:6px 0 14px;">
+          <p style="font-size:.9rem; color:var(--muted);">${escapeHtmlSearch(c.desc)}</p>
+          <p style="font-size:.88rem; margin-top:8px;"><b style="color:var(--gold-soft);">مثالیں:</b> ${c.examples.map(e=>escapeHtmlSearch(e)).join('، ')}</p>
+          <p style="font-size:.88rem; margin-top:8px;"><b style="color:var(--gold-soft);">علاج کا اصول:</b> ${escapeHtmlSearch(c.treatment)}</p>
+          <p style="font-size:.88rem; margin-top:8px; color:var(--gold-soft);">⚠ ${escapeHtmlSearch(c.action)}</p>
+        </div>
+      </details>`).join('');
+  }
+  const lab = document.getElementById('wajahLabList');
+  if(lab && !lab.dataset.ready){
+    lab.dataset.ready = '1';
+    lab.innerHTML = QM_LAB_EXTRA.map(x=> `
+      <details style="background:var(--card); border:1px solid var(--border); border-radius:10px; margin-bottom:10px; padding:4px 16px;">
+        <summary style="cursor:pointer; padding:10px 0; color:var(--gold); font-weight:700;">${escapeHtmlSearch(x.name)}</summary>
+        <div style="padding:6px 0 14px;">
+          ${x.items !== '-' ? `<p style="font-size:.88rem;"><b style="color:var(--gold-soft);">ٹیسٹ:</b> ${escapeHtmlSearch(x.items)}</p>` : ''}
+          <p style="font-size:.88rem; margin-top:8px;"><b style="color:var(--gold-soft);">کمی کی علامات:</b> ${escapeHtmlSearch(x.symptoms)}</p>
+          <p style="font-size:.88rem; margin-top:8px; color:var(--gold-soft);">⚠ ${escapeHtmlSearch(x.note)}</p>
+        </div>
+      </details>`).join('');
+  }
+}
+function qmWajahSearch(){
+  const qEl = document.getElementById('wajahSearchInput');
+  const q = (qEl.value || '').trim();
+  const out = document.getElementById('wajahSearchResult');
+  if(!q){ out.innerHTML = '<p style="color:#e0524f; text-align:center;">پہلے بیماری یا علامت کا نام لکھیں۔</p>'; return; }
+  const causeMatches = QM_CAUSE_TYPES.filter(c=> c.name.includes(q) || c.examples.some(e=> e.includes(q) || q.includes(e)));
+  const defMatches = QM_DEFICIENCY_DATA.filter(d=> d.name.includes(q) || d.symptoms.some(s=> s.t.includes(q) || q.includes(s.t)));
+  if(!causeMatches.length && !defMatches.length){
+    out.innerHTML = '<p style="color:var(--muted); text-align:center;">کوئی واضح قسم نہ ملی — براہ کرم ڈاکٹر سے مشورہ کریں تاکہ اصل وجہ معلوم ہو۔</p>';
+    return;
+  }
+  let html = causeMatches.map(c=> `
+    <div class="mujarrab-card">
+      <h4 style="color:var(--gold); margin-bottom:6px;">${escapeHtmlSearch(c.name)}</h4>
+      <p style="font-size:.85rem; color:var(--muted); margin-bottom:8px;">${escapeHtmlSearch(c.desc)}</p>
+      <p style="font-size:.88rem;"><b style="color:var(--gold-soft);">علاج کا اصول:</b> ${escapeHtmlSearch(c.treatment)}</p>
+      <p style="font-size:.88rem; margin-top:6px; color:var(--gold-soft);">⚠ ${escapeHtmlSearch(c.action)}</p>
+    </div>`).join('');
+  if(defMatches.length){
+    html += `<div class="mujarrab-card">
+      <h4 style="color:var(--gold); margin-bottom:6px;">کمی (Deficiency) کا امکان بھی ہو سکتا ہے</h4>
+      <p style="font-size:.88rem;">متعلقہ: ${defMatches.map(d=> escapeHtmlSearch(d.name)).join('، ')}</p>
+      <p style="font-size:.88rem; margin-top:6px; color:var(--gold-soft);">تفصیلی تشخیص کے لیے "وٹامنز/معدنیات کی تشخیص" بٹن دیکھیں۔</p>
+    </div>`;
+  }
+  out.innerHTML = html;
+}
+document.addEventListener('DOMContentLoaded', qmWajahInit);
+setTimeout(qmWajahInit, 0);
 
 // ---------- DIAGNOSTIC QUESTIONS (each: title + 3 boxes, single-select) ----------
 const criteria = [
