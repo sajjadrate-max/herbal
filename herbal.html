@@ -310,6 +310,9 @@ footer{position:fixed; left:0; right:0; bottom:0; z-index:55; text-align:center;
     <div id="wajahSearchResult" style="margin-top:16px;"></div>
   </div>
 
+  <h3 style="color:var(--gold); margin-top:24px;">تمام بیماریاں — کسی پر بھی ٹیپ کریں</h3>
+  <div id="wajahDiseaseChips" style="display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 20px;"></div>
+
   <h3 style="color:var(--gold); margin-top:24px;">بیماری کی وجہ کی اقسام (ڈاکٹر کا نظام)</h3>
   <div id="wajahCauseList" style="margin-top:10px;"></div>
 
@@ -781,7 +784,22 @@ function qmCauseTreatmentHtml(c){
   return `<p style="font-size:.88rem; margin-top:8px;"><b style="color:var(--gold-soft);">علاج کا اصول:</b> ${escapeHtmlSearch(c.treatment)}</p>
     <p style="font-size:.88rem; margin-top:8px; color:var(--gold-soft);">⚠ ${escapeHtmlSearch(c.action)}</p>`;
 }
+function qmWajahPickDisease(name){
+  const inp = document.getElementById('wajahSearchInput');
+  if(inp) inp.value = name;
+  qmWajahSearch();
+  const out = document.getElementById('wajahSearchResult');
+  if(out) out.scrollIntoView({behavior:'smooth', block:'start'});
+}
 function qmWajahInit(){
+  const chips = document.getElementById('wajahDiseaseChips');
+  if(chips && !chips.dataset.ready){
+    chips.dataset.ready = '1';
+    const seen = new Set();
+    const names = [];
+    QM_CAUSE_TYPES.forEach(c=> c.examples.forEach(e=>{ if(!seen.has(e)){ seen.add(e); names.push(e); } }));
+    chips.innerHTML = names.map(n=> `<button type="button" onclick="qmWajahPickDisease('${escapeJsAttr(n)}')" style="background:var(--card); border:1px solid var(--border); color:var(--gold-soft); border-radius:20px; padding:7px 14px; font-size:.85rem; cursor:pointer; font-family:inherit;">${escapeHtmlSearch(n)}</button>`).join('');
+  }
   const el = document.getElementById('wajahCauseList');
   if(el && !el.dataset.ready){
     el.dataset.ready = '1';
