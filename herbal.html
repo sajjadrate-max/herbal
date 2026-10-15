@@ -769,6 +769,20 @@ const QM_CAUSE_TYPES = [
   { name:'ذہنی و نفسیاتی بیماریاں', examples:['ڈپریشن','گھبراہٹ','بے خوابی','نیند نہ آنا'], desc:'ڈپریشن، گھبراہٹ اور نیند نہ آنا۔', treatment:'دوا اور کاؤنسلنگ سے علاج۔', action:'ماہر نفسیات یا ڈاکٹر سے رجوع کریں۔' },
   { name:'کمی (Deficiency)', examples:['وٹامن کی کمی','منرل کی کمی','کمزوری'], desc:'جسم میں کسی وٹامن، منرل، ہارمون یا دیگر جزو کی کمی سے بیماری ہوتی ہے — یہ خون/پیشاب ٹیسٹ سے معلوم ہوتی ہے۔', treatment:'کمی پوری کرنے والی غذائیں یا ڈاکٹر کی تجویز کردہ سپلیمنٹ۔', action:'سائٹ کا "وٹامنز/معدنیات کی تشخیص" بٹن دیکھیں — یقینی تشخیص کے لیے ٹیسٹ کروائیں۔' }
 ];
+// ہر بیماری کا متعلقہ عضو — تاکہ "تمام بیماریاں" کو سائٹ کے اپنے عضو کی ترتیب کے مطابق گروپ کیا جا سکے
+const QM_DISEASE_ORGAN = {
+  'ٹائیفائیڈ':'عمومی/پورے جسم کی بیماریاں', 'ٹی بی':'پھیپھڑے و دمہ', 'نمونیا':'پھیپھڑے و دمہ', 'پیشاب کا انفیکشن':'گردہ و مثانہ', 'نزلہ':'ناک', 'فلو':'عمومی/پورے جسم کی بیماریاں', 'ڈینگی':'عمومی/پورے جسم کی بیماریاں', 'ہیپاٹائٹس':'جگر و تلی', 'داد':'جلد، بال و ناخن', 'خارش':'جلد، بال و ناخن', 'منہ کی پھپھوندی':'منہ و زبان', 'ملیریا':'عمومی/پورے جسم کی بیماریاں', 'پیٹ کے کیڑے':'آنتیں و مقعد',
+  'گٹھیا':'جوڑ، ہڈیاں و پٹھے', 'جوڑوں کا درد':'جوڑ، ہڈیاں و پٹھے', 'معدے کی سوزش':'معدہ', 'دمہ':'پھیپھڑے و دمہ', 'الرجی':'عمومی/پورے جسم کی بیماریاں',
+  'ریومیٹائیڈ آرتھرائٹس':'جوڑ، ہڈیاں و پٹھے', 'لوپس':'عمومی/پورے جسم کی بیماریاں', 'ٹائپ 1 شوگر':'عمومی/پورے جسم کی بیماریاں',
+  'پتھری':'گردہ و مثانہ', 'گردے کی پتھری':'گردہ و مثانہ', 'پتے کی پتھری':'جگر و تلی', 'ہارٹ اٹیک':'دل', 'آنتوں کی رکاوٹ':'آنتیں و مقعد', 'پیشاب کی رکاوٹ':'گردہ و مثانہ',
+  'گردے فیل':'گردہ و مثانہ', 'جگر کی خرابی':'جگر و تلی', 'دل کا کمزور ہونا':'دل', 'فالج':'عمومی/پورے جسم کی بیماریاں',
+  'کینسر':'عمومی/پورے جسم کی بیماریاں', 'رسولی':'عمومی/پورے جسم کی بیماریاں', 'ٹیومر':'عمومی/پورے جسم کی بیماریاں',
+  'ہڈی ٹوٹنا':'جوڑ، ہڈیاں و پٹھے', 'زخم':'جلد، بال و ناخن', 'جل جانا':'جلد، بال و ناخن', 'موچ':'جوڑ، ہڈیاں و پٹھے',
+  'تھیلیسیمیا':'عمومی/پورے جسم کی بیماریاں', 'ہیموفیلیا':'عمومی/پورے جسم کی بیماریاں',
+  'ہائی بلڈ پریشر':'دل', 'بلند فشار خون':'دل', 'ٹائپ 2 شوگر':'عمومی/پورے جسم کی بیماریاں', 'ذیابیطس':'عمومی/پورے جسم کی بیماریاں', 'موٹاپا':'عمومی/پورے جسم کی بیماریاں', 'کولیسٹرول':'دل',
+  'ڈپریشن':'سر', 'گھبراہٹ':'سر', 'بے خوابی':'سر', 'نیند نہ آنا':'سر',
+  'وٹامن کی کمی':'عمومی/پورے جسم کی بیماریاں', 'منرل کی کمی':'عمومی/پورے جسم کی بیماریاں', 'کمزوری':'عمومی/پورے جسم کی بیماریاں'
+};
 const QM_LAB_EXTRA = [
   { name:'نمکیات (الیکٹرولائٹس)', items:'سوڈیم، پوٹاشیم، کلورائیڈ', symptoms:'دست، الٹی، کمزوری، دل کی دھڑکن کی خرابی', note:'کمی عموماً دست/الٹی/بخار کے بعد ہوتی ہے — ہلکی کمی ORS یا نمکیات کے گھول سے پوری ہو سکتی ہے، شدید کمی میں ڈرپ لگائی جاتی ہے۔ پوٹاشیم کی خود درستگی خطرناک ہو سکتی ہے — ڈاکٹر کی نگرانی ضروری ہے۔' },
   { name:'خون کے اجزاء', items:'ہیموگلوبن، پلیٹ لیٹس، سفید خلیے', symptoms:'ہیموگلوبن کم ہونے پر خون کی کمی، پلیٹ لیٹس کم ہونے پر ڈینگی وغیرہ کا شبہ، سفید خلیے قوتِ مدافعت ظاہر کرتے ہیں', note:'یہ عموماً مکمل خون کے ٹیسٹ (CBC) سے معلوم ہوتے ہیں۔' },
@@ -791,6 +805,13 @@ function qmWajahPickDisease(name){
   const out = document.getElementById('wajahSearchResult');
   if(out) out.scrollIntoView({behavior:'smooth', block:'start'});
 }
+function toggleWajahOrganPanel(organKey){
+  const panel = document.getElementById(`wajah-organ-panel-${organKey}`);
+  const arrow = document.getElementById(`wajah-organ-arrow-${organKey}`);
+  const isOpen = panel.style.display === 'block';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if(arrow) arrow.textContent = isOpen ? '▾' : '▴';
+}
 function qmWajahInit(){
   const chips = document.getElementById('wajahDiseaseChips');
   if(chips && !chips.dataset.ready){
@@ -798,7 +819,27 @@ function qmWajahInit(){
     const seen = new Set();
     const names = [];
     QM_CAUSE_TYPES.forEach(c=> c.examples.forEach(e=>{ if(!seen.has(e)){ seen.add(e); names.push(e); } }));
-    chips.innerHTML = names.map(n=> `<button type="button" onclick="qmWajahPickDisease('${escapeJsAttr(n)}')" style="background:var(--card); border:1px solid var(--border); color:var(--gold-soft); border-radius:20px; padding:7px 14px; font-size:.85rem; cursor:pointer; font-family:inherit;">${escapeHtmlSearch(n)}</button>`).join('');
+    const byOrgan = {};
+    names.forEach(n=>{
+      const organ = QM_DISEASE_ORGAN[n] || 'عمومی/پورے جسم کی بیماریاں';
+      (byOrgan[organ] = byOrgan[organ] || []).push(n);
+    });
+    const order = (typeof organOrderList !== 'undefined' && organOrderList.length) ? organOrderList : Object.keys(byOrgan);
+    const seenOrgan = new Set();
+    const orderedOrgans = order.filter(o=> byOrgan[o] && !seenOrgan.has(o) && seenOrgan.add(o));
+    Object.keys(byOrgan).forEach(o=> { if(!seenOrgan.has(o)){ seenOrgan.add(o); orderedOrgans.push(o); } });
+    chips.innerHTML = orderedOrgans.map(organ=>{
+      const safe = escapeHtmlSearch(organ);
+      const btns = byOrgan[organ].map(n=> `<button type="button" onclick="qmWajahPickDisease('${escapeJsAttr(n)}')" style="background:var(--navy2); border:1px solid var(--border); color:var(--gold-soft); border-radius:20px; padding:7px 14px; font-size:.85rem; cursor:pointer; font-family:inherit;">${escapeHtmlSearch(n)}</button>`).join('');
+      return `<div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:10px;">
+        <div onclick="toggleWajahOrganPanel('${escapeJsAttr(organ)}')" style="padding:14px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; color:var(--gold); font-weight:700;">
+          <span>${safe}</span><span id="wajah-organ-arrow-${safe}">▾</span>
+        </div>
+        <div id="wajah-organ-panel-${safe}" style="display:none; padding:10px 12px 14px; border-top:1px solid var(--border);">
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">${btns}</div>
+        </div>
+      </div>`;
+    }).join('');
   }
   const el = document.getElementById('wajahCauseList');
   if(el && !el.dataset.ready){
